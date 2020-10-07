@@ -20,11 +20,16 @@ Advanced strategy tips:
 """
 
 class AlgoStrategy(gamelib.AlgoCore):
+
+
     def __init__(self):
         super().__init__()
         seed = random.randrange(maxsize)
         random.seed(seed)
         gamelib.debug_write('Random seed: {}'.format(seed))
+        self.TURRETS = []
+        self.WALLS = []
+        self.FACTORIES = []
 
     def on_game_start(self, config):
         """ 
@@ -73,6 +78,19 @@ class AlgoStrategy(gamelib.AlgoCore):
         For offense we will use long range demolishers if they place stationary units near the enemy's front.
         If there are no stationary units to attack in the front, we will send Scouts to try and score quickly.
         """
+        if game_state.turn_number == 0:
+            self.first_round(game_state)
+            return
+        elif game_state.turn_number == 1:
+            self.second_round(game_state)
+            return
+        elif game_state.turn_number == 2:
+            self.third_round(game_state)
+            return
+        elif game_state.turn_number == 3:
+            self.fourth_round(game_state)
+            return
+
         # First, place basic defenses
         self.build_defences(game_state)
         # Now build reactive defenses based on where the enemy scored
@@ -232,6 +250,71 @@ class AlgoStrategy(gamelib.AlgoCore):
                 self.scored_on_locations.append(location)
                 gamelib.debug_write("All locations: {}".format(self.scored_on_locations))
 
+    def first_round(self, game_state):
+        # place walls on undefendable corners
+        game_state.attempt_spawn(WALL, [[0, 13], [27, 13]])
+        game_state.attempt_spawn(FACTORY, [[13, 1], [14, 1]])
+        # place turrets
+        game_state.attempt_spawn(TURRET, [[3, 12], [7, 9], [24, 12], [20, 9], [11,12]])
+        # place interceptors as defensive tools
+        game_state.attempt_spawn(INTERCEPTOR, [9, 4], num=3)
+        game_state.attempt_spawn(INTERCEPTOR, [18, 4], num=2)
+
+
+    def second_round(self, game_state):
+        game_state.attempt_spawn(TURRET, [[16, 12]])
+        game_state.attempt_spawn(WALL, [[3, 13], [11, 13], [16, 13], [24, 13]])
+        for i in range(game_state.MP):
+            if i % 2 == 0:
+                game_state.attempt_spawn(INTERCEPTOR, [7, 6])
+            if i % 2 == 1:
+                game_state.attempt_spawn(INTERCEPTOR, [20, 6])
+
+    def third_round(self, game_state):
+        self.update_units(game_state.game_map)
+        self.upgrade_next_factories(game_state, 1)
+        game_state.attempt_upgrade([11, 12])
+        for i in range(game_state.MP):
+            if i % 2 == 0:
+                game_state.attempt_spawn(INTERCEPTOR, [7, 6])
+            if i % 2 == 1:
+                game_state.attempt_spawn(INTERCEPTOR, [20, 6])
+
+    def fourth_round(self, game_state):
+        game_state.attempt_spawn(FACTORY, [14, 2])
+        self.update_units(game_state.game_map)
+        self.upgrade_next_factories(game_state, 1)
+        for i in range(game_state.MP):
+            if i % 2 == 0:
+                game_state.attempt_spawn(INTERCEPTOR, [7, 6])
+            if i % 2 == 1:
+                game_state.attempt_spawn(INTERCEPTOR, [20, 6])
+
+    def update_units(self, map):
+        self.TURRETS = []
+        self.WALLS = []
+        self.FACTORIES = []
+        for x in range(map.ARENA_SIZE):
+            for y in range(map.HALF_ARENA):
+                unit = map[x, y]
+                if not unit:
+                    continue
+                unit = unit[0]
+                if unit.unit_type == "TURRET":
+                    self.TURRETS.append(unit)
+                elif unit.unit_type == "WALL":
+                    self.WALLS.append(unit)
+                elif unit.unit_type == "FACTORY":
+                    self.FACTORIES.append(unit)
+
+
+    def upgrade_next_factories(self, game_state, count):
+        for factory in self.FACTORIES:
+            if not factory.upgraded:
+                game_state.attempt_upgrade([factory.x, factory.y])
+                count -= 1
+                if count == 0:
+                    return
 
 if __name__ == "__main__":
     algo = AlgoStrategy()
