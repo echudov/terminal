@@ -8,13 +8,27 @@ from gamelib.util import debug_write
 
 
 def are_losing(game_state: GameState) -> bool:
-    """Returns whether or not we are losing. Function of health."""
+    """Returns whether or not we are losing. Function of health.
+
+    Args:
+        game_state (GameState): The current game state object
+
+    Returns:
+        losing (bool): Whether we are losing
+    """
 
     return game_state.my_health >= game_state.enemy_health
 
 
 def health_differential(game_state: GameState) -> int:
-    """Returns difference between our and opponent's health. If diff < 0, we are losing."""
+    """Returns difference between our and opponent's health. If diff < 0, we are losing.
+
+    Args:
+        game_state (GameState): The current game state object
+
+    Returns:
+        differential (int): The health differential between us and our opponent
+    """
 
     return game_state.my_health - game_state.enemy_health
 
@@ -22,6 +36,13 @@ def health_differential(game_state: GameState) -> int:
 def resource_differential(game_state: GameState, resource_type: str) -> int:
     """Returns difference between our and opponent's resources of the given type (MP / SP).
     If diff < 0, we have fewer.
+
+    Args:
+        game_state (GameState): The current game state object
+        resource_type (str): Either "MP" or "SP"
+
+    Returns:
+        differential (int): The differential between our and our opponent's given resource
     """
 
     if resource_type == "MP":
@@ -30,53 +51,18 @@ def resource_differential(game_state: GameState, resource_type: str) -> int:
         return game_state.get_resource(0, 0) - game_state.get_resource(0, 1)
 
 
-def get_structure_nums(game_state: GameState, player: int) -> dict:
-    """Returns a dict mapping structure type (name as str) to its count for the given player.
-    Player = 0 -> Us
-    Player = 1 -> Enemy
-    """
-
-    board_map = game_state.game_map
-
-    turret_count = 0
-    wall_count = 0
-    factory_count = 0
-
-    # Iterate over board and counts player's units
-    for x in range(board_map.ARENA_SIZE):
-        for y in range(board_map.ARENA_SIZE):
-            units = board_map[x, y]
-            if len(units) == 0:
-                continue
-
-            # Only can have 1 structure on a tile
-            unit = units[0]
-            if unit.player_index != player:
-                continue
-
-            # Count
-            if unit.unit_type == "TURRET":
-                turret_count += 1
-            elif unit.unit_type == "WALL":
-                wall_count += 1
-            elif unit.unit_type == "FACTORY":
-                factory_count += 1
-
-    # Construct and return dict
-    unit_mappings = {
-        "TURRET": turret_count,
-        "WALL": wall_count,
-        "FACTORY": factory_count,
-    }
-
-    return unit_mappings
-
-
 def get_structure_objects(
-    game_state: GameState, desired_unit_type: str = None
+    game_state: GameState, desired_structure_type: str = None, player: int = None
 ) -> [GameUnit]:
-    """Returns a list of all our GameUnit structures (for example to upgrade them).
-    Optionally, specify the type of structure.
+    """Returns a list of all GameUnit structures (as objects). Optionally, specify the type of structure and/or player.
+
+    Args:
+        game_state (GameState): The current game state object
+        desired_structure_type (OPTIONAL) (str): If given, only return this type of structure
+        player (OPTIONAL) (int): If given, only return the structures owned by this player (0 is us, 1 is opponent)
+
+    Returns:
+        structures_list (List): List of all our structures (or of the given type)
     """
 
     board_map = game_state.game_map
@@ -92,10 +78,13 @@ def get_structure_objects(
 
             # Only can have 1 structure on a tile
             unit = units[0]
-            if unit.player_index != 0:
-                continue  # Not ours
 
-            if desired_unit_type is None:
+            if player is not None:
+                # Desired specific player
+                if unit.player_index != player:
+                    continue  # Not the desired player's
+
+            if desired_structure_type is None:
                 # Add all types to list
                 if (
                     unit.unit_type == "TURRET"
@@ -105,7 +94,71 @@ def get_structure_objects(
                     our_structures.append(unit)
             else:
                 # Add only given type to list
-                if unit.unit_type == desired_unit_type:
+                if unit.unit_type == desired_structure_type:
                     our_structures.append(unit)
 
     return our_structures
+
+
+def get_structure_nums(game_state: GameState, player: int) -> dict:
+    """Returns a dict mapping structure type (name as str) to its count for the given player.
+
+    Args:
+        game_state (GameState): The current game state object
+        player (int): Either 0 (Us) or 1 (Enemy)
+
+    Returns:
+        structures_map (dict): Maps structure type as str to their count
+    """
+
+    factories = get_structure_objects(game_state, "FACTORY", player=player)
+    turrets = get_structure_objects(game_state, "TURRET", player=player)
+    walls = get_structure_objects(game_state, "WALL", player=player)
+
+    # Construct and return dict
+    unit_mappings = {
+        "FACTORY": len(factories),
+        "TURRET": len(turrets),
+        "WALL": len(walls),
+    }
+
+    return unit_mappings
+
+
+def compute_factory_impact_differential(game_state: GameState) -> dict:
+    """Computes the factory impact differential between us and our opponent.
+    This is the MP/SP production difference per turn as of this game state.
+    If diff < 0, we are producing less of that resource type.
+
+    Args:
+        game_state: (GameState): The current game state object
+
+    Returns:
+        factory_impact_diff (dict): Maps resource type (MP/SP) to its diff
+    """
+
+    mp_diff = 0
+    sp_diff = 0
+
+    factories = get_structure_objects(game_state, "FACTORY")
+    for factory in factories:
+        if factory.player_index == 0:
+            # Ours
+            if factory.upgraded:
+                sp_diff += 3
+                mp_diff += 1
+            else:
+                sp_diff += 1
+                mp_diff += 1
+        else:
+            # Opponent's
+            if factory.upgraded:
+                sp_diff -= 3
+                mp_diff -= 1
+            else:
+                sp_diff -= 1
+                mp_diff -= 1
+
+    diffs = {"MP-Diff": mp_diff, "SP-Diff": sp_diff}
+
+    return diffs
