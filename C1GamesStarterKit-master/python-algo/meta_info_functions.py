@@ -87,9 +87,9 @@ def get_structure_objects(
             if desired_structure_type is None:
                 # Add all types to list
                 if (
-                    unit.unit_type == "TURRET"
-                    or unit.unit_type == "WALL"
-                    or unit.unit_type == "FACTORY"
+                    unit.unit_type == game_state.TURRET
+                    or unit.unit_type == game_state.WALL
+                    or unit.unit_type == game_state.FACTORY
                 ):
                     our_structures.append(unit)
             else:
@@ -111,21 +111,21 @@ def get_structure_nums(game_state: GameState, player: int) -> dict:
         structures_map (dict): Maps structure type as str to their count
     """
 
-    factories = get_structure_objects(game_state, "FACTORY", player=player)
-    turrets = get_structure_objects(game_state, "TURRET", player=player)
-    walls = get_structure_objects(game_state, "WALL", player=player)
+    factories = get_structure_objects(game_state, game_state.FACTORY, player=player)
+    turrets = get_structure_objects(game_state, game_state.TURRET, player=player)
+    walls = get_structure_objects(game_state, game_state.WALL, player=player)
 
     # Construct and return dict
     unit_mappings = {
-        "FACTORY": len(factories),
-        "TURRET": len(turrets),
-        "WALL": len(walls),
+        game_state.FACTORY: len(factories),
+        game_state.TURRET: len(turrets),
+        game_state.WALL: len(walls),
     }
 
     return unit_mappings
 
 
-def compute_factory_impact_differential(game_state: GameState) -> dict:
+def compute_factory_impact_differential(game_state: GameState) -> (int, int):
     """Computes the factory impact differential between us and our opponent.
     This is the MP/SP production difference per turn as of this game state.
     If diff < 0, we are producing less of that resource type.
@@ -134,13 +134,13 @@ def compute_factory_impact_differential(game_state: GameState) -> dict:
         game_state: (GameState): The current game state object
 
     Returns:
-        factory_impact_diff (dict): Maps resource type (MP/SP) to its diff
+        factory_impact_diff (int, int): Tuple (MP-Diff, SP-Diff)
     """
 
     mp_diff = 0
     sp_diff = 0
 
-    factories = get_structure_objects(game_state, "FACTORY")
+    factories = get_structure_objects(game_state, game_state.FACTORY)
     for factory in factories:
         if factory.player_index == 0:
             # Ours
@@ -159,6 +159,4 @@ def compute_factory_impact_differential(game_state: GameState) -> dict:
                 sp_diff -= 1
                 mp_diff -= 1
 
-    diffs = {"MP-Diff": mp_diff, "SP-Diff": sp_diff}
-
-    return diffs
+    return (mp_diff, sp_diff)
