@@ -5,6 +5,8 @@ import warnings
 from sys import maxsize
 import json
 
+from meta_info_functions import are_losing, health_differential, resource_differential, get_structure_nums, get_structure_objects
+
 
 """
 Most of the algo code you write will be in this file unless you create new
@@ -290,25 +292,11 @@ class AlgoStrategy(gamelib.AlgoCore):
             if i % 2 == 1:
                 game_state.attempt_spawn(INTERCEPTOR, [20, 6])
 
-    def update_units(self, map):
-        self.TURRETS = []
-        self.WALLS = []
-        self.FACTORIES = []
-        for x in range(map.ARENA_SIZE):
-            for y in range(map.HALF_ARENA):
-                unit = map[x, y]
-                if not unit:
-                    continue
-                unit = unit[0]
-                if unit.unit_type == "TURRET":
-                    self.TURRETS.append(unit)
-                elif unit.unit_type == "WALL":
-                    self.WALLS.append(unit)
-                elif unit.unit_type == "FACTORY":
-                    self.FACTORIES.append(unit)
+    # TODO Change this
+    def upgrade_next_factories(count: int, game_state: GameState) -> int:
+        """Upgrades any factories that are unupgraded. Returns # of actual upgrades."""
 
-
-    def upgrade_next_factories(self, game_state, count):
+        upgraded = 0
         for factory in self.FACTORIES:
             if not factory.upgraded:
                 game_state.attempt_upgrade([factory.x, factory.y])
