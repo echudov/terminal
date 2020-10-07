@@ -88,8 +88,8 @@ class Region:
                 for coord in hcoords:
                     unit = map[coord[0], coord[1]]
                     if not unit:
-                        continue
                         self[coord[0], coord[1]][1] = None
+                        continue
                     unit = unit[0]
                     if unit.unit_type == "TURRET":
                         self.units[unit.unit_type].append(unit)
@@ -111,11 +111,17 @@ class Region:
             below = (s[0], s[1] - 1)
             right = (s[0] + 1, s[1])
             left = (s[0] - 1, s[1])
-            if self[above][0] >= 0 and not visited[above]:
+            adjacents = [above, below, right, left]
+            for adj in adjacents:
+                if self[adj][0] >= 0 and not visited[adj]:
+                    visited[adj] = True
+                    if self[adj][1] is None:
+                        continue
+                    if self[adj][0] == 0:
+                        start_dict[adj] = path + above
+                    else:
+                        queue.append([path + above])
 
-
-                if neighbor is valid:
-                    start_dict[neighbor]
 
     def simulate_breachability(self, unit_type, starting_location, count=None):
         units_breached = 0
