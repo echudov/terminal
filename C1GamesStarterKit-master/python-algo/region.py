@@ -115,6 +115,8 @@ class Region:
         """
         start = edge[0]
         finish = edge[1]
+        if finish[0] < start[0]:
+            start, finish = finish, start
         # if the line is horizontal
         if start[0] == finish[0]:
             return [(start[0], min(start[1], finish[1]) + i) for i in range(abs(finish[1] - start[1]) + 1)]
@@ -168,6 +170,8 @@ class Region:
         others near it
         @param map: GameMap representing the current state
         """
+        if map is None:
+            return
         for turret in self.units["TURRET"]:
             for coord in map.get_locations_in_range((turret.x, turret.y), turret.attackRange):
                 if self.xbounds[1] >= coord[0] >= self.xbounds[0] and self.ybounds[1] >= coord[1] >= self.ybounds[0]:

@@ -295,7 +295,8 @@ class AlgoStrategy(gamelib.AlgoCore):
                 game_state.attempt_spawn(INTERCEPTOR, [20, 6])
 
     # TODO Change this
-    def upgrade_next_factories(count: int, game_state: GameState) -> int:
+    '''
+    def upgrade_next_factories(count: int, game_state: gamelib.GameState) -> int:
         """Upgrades any factories that are unupgraded. Returns # of actual upgrades."""
 
         upgraded = 0
@@ -305,7 +306,7 @@ class AlgoStrategy(gamelib.AlgoCore):
                 count -= 1
                 if count == 0:
                     return
-
+    '''
 if __name__ == "__main__":
     algo = AlgoStrategy()
     algo.start()
