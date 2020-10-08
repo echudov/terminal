@@ -5,12 +5,29 @@ import warnings
 from sys import maxsize
 import json
 
-from meta_info_functions import (
+from gamelib.game_state import GameState
+from gamelib.game_map import GameMap
+from gamelib.unit import GameUnit
+
+from offensive_building_functions import (
+    OffensiveInterceptorSpam,
+    OffensiveDemolisherLine,
+)
+
+from defensive_building_functions import (
+    DefensiveWallStrat,
+    DefensiveTurretWallStrat,
+)
+
+from defense import Defense
+
+from meta_info_util import (
     are_losing,
     health_differential,
     resource_differential,
-    get_structure_nums,
     get_structure_objects,
+    get_structure_nums,
+    compute_factory_impact_differential,
 )
 
 
@@ -34,9 +51,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         seed = random.randrange(maxsize)
         random.seed(seed)
         gamelib.debug_write("Random seed: {}".format(seed))
-        self.TURRETS = []
-        self.WALLS = []
-        self.FACTORIES = []
 
     def on_game_start(self, config):
         """
@@ -53,7 +67,9 @@ class AlgoStrategy(gamelib.AlgoCore):
         INTERCEPTOR = config["unitInformation"][5]["shorthand"]
         MP = 1
         SP = 0
-        # This is a good place to do initial setup
+
+        # OUR INITIAL SETUP BELOW
+        self.units = {}  # Dict mapping unit type to unit objects
         self.scored_on_locations = []
 
     def on_turn(self, turn_state):
@@ -70,13 +86,35 @@ class AlgoStrategy(gamelib.AlgoCore):
                 game_state.turn_number
             )
         )
-        game_state.suppress_warnings(
-            True
-        )  # Comment or remove this line to enable warnings.
+        # Comment or remove this line to enable warnings.
+        # game_state.suppress_warnings(True)
+
+        # OUR TURN-DECISION-MAKING HERE
+
+        # Refresh units list
+        self.units = get_structure_objects(game_state, player=0)
+
+        (mp_diff, sp_diff) = compute_factory_impact_differential(game_state)
+        if mp_diff < 0 or sp_diff < 0:
+            # We need to build more factories! Figure out why
+            opponent_struct_nums = get_structure_nums(game_state, 1)
+            if len(opponent_struct_nums[game_state.FACTORY]) > len(
+                self.units[game_state.FACTORY]
+            ):
+                # Simply because they have more - Catch up!
+                game_state.attempt_spawn(game_state.FACTORY, (0, 0))
+            else:
+                # Must be because they are upgrading faster - Catch up!
+                our_factories = self.units[game_state.FACTORY]
+                for factory in our_factories:
+                    if not factory.upgraded:
+                        num = game_state.attempt_upgrade((factory.x, factory.y))
+                        if num != 0:
+                            break  # Upgrade max 1 factory for now
 
         self.starter_strategy(game_state)
 
-        game_state.submit_turn()
+        game_state.submit_turn()  # Must be called at the end
 
     """
     NOTE: All the methods after this point are part of the sample starter-algo

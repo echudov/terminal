@@ -40,10 +40,11 @@ class Region:
             v[0] for v in self.vertices
         )
         self.xwidth = self.xbounds[1] - self.xbounds[0]
-        self.ywidth = self.ybounds[1] - self.ybounds[0]
+
         self.ybounds = min(v[1] for v in self.vertices), max(
             v[1] for v in self.vertices
         )
+        self.ywidth = self.ybounds[1] - self.ybounds[0]
 
         # each value in the grid looks like (int, units)
         # the first # is the type of coordinate:
@@ -134,18 +135,21 @@ class Region:
         finish = edge[1]
         if finish[0] < start[0]:
             start, finish = finish, start
+
         # if the line is horizontal
         if start[0] == finish[0]:
             return [
                 (start[0], min(start[1], finish[1]) + i)
                 for i in range(abs(finish[1] - start[1]) + 1)
             ]
+
         # line is vertical
         if start[1] == finish[1]:
             return [
                 (min(start[0], finish[0]) + i, start[1])
                 for i in range(abs(finish[0] - start[0]) + 1)
             ]
+
         # line is upwards sloping
         if finish[1] - start[1] > 0:
             return [
@@ -190,17 +194,18 @@ class Region:
             self.ybounds[0] : (self.ybounds[1] + 1),
         ]
 
-    def calculate_local_damage_regions(self, map: gamelib.GameMap):
+    def calculate_local_damage_regions(self, game_map: gamelib.GameMap):
         """
         Calculates the damage regions array based on only this region's structures
         Different from regular as it helps figure out the impact from only the buildings in this region, not
         others near it
-        @param map: GameMap representing the current state
+        @param game_map: GameMap representing the current state
         """
-        if map is None:
+        if game_map is None:
             return
+
         for turret in self.units["TURRET"]:
-            for coord in map.get_locations_in_range(
+            for coord in game_map.get_locations_in_range(
                 (turret.x, turret.y), turret.attackRange
             ):
                 if (
