@@ -71,7 +71,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         SP = 0
 
         # OUR INITIAL SETUP BELOW
-        self.turn = 0
         self.health_diff = 0
         self.units = {}  # Dict mapping unit type to unit objects
         self.enemy_units = {}  # Same as above, for opponent
@@ -109,14 +108,11 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Perform moves
         self.choose_and_execute_strategy(game_state)
 
-        self.turn += 1
-
         game_state.submit_turn()  # Must be called at the end
 
-    """
-    NOTE: All the methods after this point are part of the sample starter-algo
-    strategy and can safely be replaced for your custom algo.
-    """
+    #####################################################################
+    ####################### OUR ALGO FUNCTIONS ##########################
+    #####################################################################
 
     def resolve_factory_impact_diff(self, game_state: GameState) -> int:
         """Evaluated the current Factory Impact Differential and accordingly builds/upgrades factories.
@@ -158,6 +154,11 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # TODO
 
+        # For the first few turns, just get set up
+        if game_state.turn_number <= 3:
+            self.starting_strategy(game_state)
+            return
+
         # Choose a strategy (aggressive, medium, passive)
         aggressive = False
         medium = False
@@ -170,9 +171,6 @@ class AlgoStrategy(gamelib.AlgoCore):
             self.medium_strategy(game_state)
         elif passive:
             self.passive_strategy(game_state)
-
-        # For now:
-        self.starter_strategy(game_state)
 
     def aggressive_strategy(self, game_state: GameState):
         """Executes the aggressive strategy.
@@ -213,60 +211,69 @@ class AlgoStrategy(gamelib.AlgoCore):
             game_state, (0, 13), game_state.ARENA_SIZE, right=True
         )
 
-    def starter_strategy(self, game_state):
+    def starting_strategy(self, game_state: GameState):
+        """Wrapper for executing a strategy for the first few rounds of the game.
+
+        Args:
+            game_state (GameState): The current GameState object
         """
-        For defense we will use a spread out layout and some interceptors early on.
-        We will place turrets near locations the opponent managed to score on.
-        For offense we will use long range demolishers if they place stationary units near the enemy's front.
-        If there are no stationary units to attack in the front, we will send Scouts to try and score quickly.
-        """
+
         if game_state.turn_number == 0:
             self.first_round(game_state)
-            return
         elif game_state.turn_number == 1:
             self.second_round(game_state)
-            return
         elif game_state.turn_number == 2:
             self.third_round(game_state)
-            return
         elif game_state.turn_number == 3:
             self.fourth_round(game_state)
-            return
 
-        # First, place basic defenses
-        self.build_defences(game_state)
-        # Now build reactive defenses based on where the enemy scored
-        self.build_reactive_defense(game_state)
+    #####################################################################
+    ########## HARD-CODED FUNCTIONS FOR THE FIRST FEW ROUNDS ############
+    #####################################################################
 
-        # If the turn is less than 5, stall with interceptors and wait to see enemy's base
-        if game_state.turn_number < 5:
-            self.stall_with_interceptors(game_state)
-        else:
-            # Now let's analyze the enemy base to see where their defenses are concentrated.
-            # If they have many units in the front we can build a line for our demolishers to attack them at long range.
-            if (
-                self.detect_enemy_unit(
-                    game_state, unit_type=None, valid_x=None, valid_y=[14, 15]
-                )
-                > 10
-            ):
-                self.demolisher_line_strategy(game_state)
-            else:
-                # They don't have many units in the front so lets figure out their least defended area and send Scouts there.
+    def first_round(self, game_state):
+        # place walls on undefendable corners
+        game_state.attempt_spawn(WALL, [[0, 13], [27, 13]])
+        game_state.attempt_spawn(FACTORY, [[13, 1], [14, 1]])
 
-                # Only spawn Scouts every other turn
-                # Sending more at once is better since attacks can only hit a single scout at a time
-                if game_state.turn_number % 2 == 1:
-                    # To simplify we will just check sending them from back left and right
-                    scout_spawn_location_options = [[13, 0], [14, 0]]
-                    best_location = self.least_damage_spawn_location(
-                        game_state, scout_spawn_location_options
-                    )
-                    game_state.attempt_spawn(SCOUT, best_location, 1000)
+        # place turrets
+        game_state.attempt_spawn(TURRET, [[3, 12], [7, 9], [24, 12], [20, 9], [11, 12]])
 
-                # Lastly, if we have spare SP, let's build some Factories to generate more resources
-                factory_locations = [[13, 2], [14, 2], [13, 3], [14, 3]]
-                game_state.attempt_spawn(FACTORY, factory_locations)
+        # place interceptors as defensive tools
+        game_state.attempt_spawn(INTERCEPTOR, [9, 4], num=3)
+        game_state.attempt_spawn(INTERCEPTOR, [18, 4], num=2)
+
+    def second_round(self, game_state):
+        game_state.attempt_spawn(TURRET, [[16, 12]])
+        game_state.attempt_spawn(WALL, [[3, 13], [11, 13], [16, 13], [24, 13]])
+
+        for i in range(game_state.MP):
+            if i % 2 == 0:
+                game_state.attempt_spawn(INTERCEPTOR, [7, 6])
+            if i % 2 == 1:
+                game_state.attempt_spawn(INTERCEPTOR, [20, 6])
+
+    def third_round(self, game_state):
+        game_state.attempt_upgrade([11, 12])
+
+        for i in range(game_state.MP):
+            if i % 2 == 0:
+                game_state.attempt_spawn(INTERCEPTOR, [7, 6])
+            if i % 2 == 1:
+                game_state.attempt_spawn(INTERCEPTOR, [20, 6])
+
+    def fourth_round(self, game_state):
+        game_state.attempt_spawn(FACTORY, [14, 2])
+
+        for i in range(game_state.MP):
+            if i % 2 == 0:
+                game_state.attempt_spawn(INTERCEPTOR, [7, 6])
+            if i % 2 == 1:
+                game_state.attempt_spawn(INTERCEPTOR, [20, 6])
+
+    #####################################################################
+    ######## FUNCTIONS THEY HAVE GIVEN US AND MAY PROVE USEFUL ##########
+    #####################################################################
 
     def build_defences(self, game_state):
         """
@@ -418,59 +425,6 @@ class AlgoStrategy(gamelib.AlgoCore):
                 gamelib.debug_write(
                     "All locations: {}".format(self.scored_on_locations)
                 )
-
-    def first_round(self, game_state):
-        # place walls on undefendable corners
-        game_state.attempt_spawn(WALL, [[0, 13], [27, 13]])
-        game_state.attempt_spawn(FACTORY, [[13, 1], [14, 1]])
-        # place turrets
-        game_state.attempt_spawn(TURRET, [[3, 12], [7, 9], [24, 12], [20, 9], [11, 12]])
-        # place interceptors as defensive tools
-        game_state.attempt_spawn(INTERCEPTOR, [9, 4], num=3)
-        game_state.attempt_spawn(INTERCEPTOR, [18, 4], num=2)
-
-    def second_round(self, game_state):
-        game_state.attempt_spawn(TURRET, [[16, 12]])
-        game_state.attempt_spawn(WALL, [[3, 13], [11, 13], [16, 13], [24, 13]])
-        for i in range(game_state.MP):
-            if i % 2 == 0:
-                game_state.attempt_spawn(INTERCEPTOR, [7, 6])
-            if i % 2 == 1:
-                game_state.attempt_spawn(INTERCEPTOR, [20, 6])
-
-    def third_round(self, game_state):
-        self.update_units(game_state.game_map)
-        self.upgrade_next_factories(game_state, 1)
-        game_state.attempt_upgrade([11, 12])
-        for i in range(game_state.MP):
-            if i % 2 == 0:
-                game_state.attempt_spawn(INTERCEPTOR, [7, 6])
-            if i % 2 == 1:
-                game_state.attempt_spawn(INTERCEPTOR, [20, 6])
-
-    def fourth_round(self, game_state):
-        game_state.attempt_spawn(FACTORY, [14, 2])
-        self.update_units(game_state.game_map)
-        self.upgrade_next_factories(game_state, 1)
-        for i in range(game_state.MP):
-            if i % 2 == 0:
-                game_state.attempt_spawn(INTERCEPTOR, [7, 6])
-            if i % 2 == 1:
-                game_state.attempt_spawn(INTERCEPTOR, [20, 6])
-
-    # TODO Change this
-    '''
-    def upgrade_next_factories(count: int, game_state: gamelib.GameState) -> int:
-        """Upgrades any factories that are unupgraded. Returns # of actual upgrades."""
-
-        upgraded = 0
-        for factory in self.FACTORIES:
-            if not factory.upgraded:
-                game_state.attempt_upgrade([factory.x, factory.y])
-                count -= 1
-                if count == 0:
-                    return
-    '''
 
 
 if __name__ == "__main__":
