@@ -26,7 +26,7 @@ from meta_info_util import (
     health_differential,
     resource_differential,
     get_structure_objects,
-    get_structure_nums,
+    get_structure_dict,
     compute_factory_impact_differential,
 )
 
@@ -70,6 +70,7 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # OUR INITIAL SETUP BELOW
         self.units = {}  # Dict mapping unit type to unit objects
+        self.enemy_units = {}  # Same as above, for opponent
         self.scored_on_locations = []
 
     def on_turn(self, turn_state):
@@ -92,7 +93,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         # OUR TURN-DECISION-MAKING HERE
 
         # Refresh units list
-        self.units = get_structure_objects(game_state, player=0)
+        self.units = get_structure_dict(game_state, player=0)
+        self.enemy_units = get_structure_dict(game_state, player=1)
 
         (mp_diff, sp_diff) = compute_factory_impact_differential(game_state)
         if mp_diff < 0 or sp_diff < 0:
