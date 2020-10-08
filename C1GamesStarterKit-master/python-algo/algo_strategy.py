@@ -212,7 +212,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         )
 
     def starting_strategy(self, game_state: GameState):
-        """Wrapper for executing a strategy for the first few rounds of the game.
+        """Wrapper for executing a strategy for the first 3 rounds of the game.
 
         Args:
             game_state (GameState): The current GameState object
@@ -224,52 +224,69 @@ class AlgoStrategy(gamelib.AlgoCore):
             self.second_round(game_state)
         elif game_state.turn_number == 2:
             self.third_round(game_state)
-        elif game_state.turn_number == 3:
-            self.fourth_round(game_state)
 
     #####################################################################
     ########## HARD-CODED FUNCTIONS FOR THE FIRST FEW ROUNDS ############
     #####################################################################
 
-    def first_round(self, game_state):
-        # place walls on undefendable corners
-        game_state.attempt_spawn(WALL, [[0, 13], [27, 13]])
-        game_state.attempt_spawn(FACTORY, [[13, 1], [14, 1]])
+    def first_round(self, game_state: GameState):
+        """Hard-coded moves for the first turn. Check Miro for what this results in.
 
-        # place turrets
-        game_state.attempt_spawn(TURRET, [[3, 12], [7, 9], [24, 12], [20, 9], [11, 12]])
+        Args:
+            game_state (GameState): The current GameState object
+        """
 
-        # place interceptors as defensive tools
+        # 2 Walls on top edges
+        game_state.attempt_spawn(game_state.WALL, [[0, 13], [27, 13]])
+
+        # 4 Turrets
+        game_state.attempt_spawn(
+            game_state.TURRET, [[3, 12], [7, 9], [24, 12], [20, 9], [11, 12]]
+        )
+
+        # 1 Factory and upgrade it
+        game_state.attempt_spawn(game_state.FACTORY, [13, 1])
+        game_state.attempt_upgrade([13, 1])
+
+        # 5 Interceptors on defense
         game_state.attempt_spawn(INTERCEPTOR, [9, 4], num=3)
-        game_state.attempt_spawn(INTERCEPTOR, [18, 4], num=2)
+        game_state.attempt_spawn(INTERCEPTOR, [16, 2], num=2)
 
-    def second_round(self, game_state):
-        game_state.attempt_spawn(TURRET, [[16, 12]])
-        game_state.attempt_spawn(WALL, [[3, 13], [11, 13], [16, 13], [24, 13]])
+    def second_round(self, game_state: GameState):
+        """Hard-coded moves for the second turn. Check Miro for what this results in.
 
-        for i in range(game_state.MP):
-            if i % 2 == 0:
-                game_state.attempt_spawn(INTERCEPTOR, [7, 6])
-            if i % 2 == 1:
-                game_state.attempt_spawn(INTERCEPTOR, [20, 6])
+        Args:
+            game_state (GameState): The current GameState object
+        """
 
-    def third_round(self, game_state):
-        game_state.attempt_upgrade([11, 12])
+        # Place final turret
+        game_state.attempt_spawn(game_state.TURRET, [16, 12])
+        # Save rest of SP for next round to buy Factory
 
-        for i in range(game_state.MP):
-            if i % 2 == 0:
-                game_state.attempt_spawn(INTERCEPTOR, [7, 6])
-            if i % 2 == 1:
-                game_state.attempt_spawn(INTERCEPTOR, [20, 6])
+        # 6 Interceptors on defense
+        game_state.attempt_spawn(INTERCEPTOR, [10, 3], num=3)
+        game_state.attempt_spawn(INTERCEPTOR, [17, 3], num=3)
 
-    def fourth_round(self, game_state):
-        game_state.attempt_spawn(FACTORY, [14, 2])
+    def third_round(self, game_state: GameState):
+        """Hard-coded moves for the third turn. Check Miro for what this results in.
 
-        for i in range(game_state.MP):
-            if i % 2 == 0:
-                game_state.attempt_spawn(INTERCEPTOR, [7, 6])
-            if i % 2 == 1:
-                game_state.attempt_spawn(INTERCEPTOR, [20, 6])
+        Args:
+            game_state (GameState): The current GameState object
+        """
+
+        # Build 2nd Factory
+        game_state.attempt_spawn(game_state.FACTORY, [14, 1])
+        # Save rest of SP
+
+        # Build wall in front of every turret
+        our_turrets = self.units[game_state.TURRET]
+        for turret in our_turrets:
+            wall_loc = (turret.location.x, turret.location.y + 1)
+            game_state.attempt_spawn(game_state.WALL, wall_loc)
+
+        # 6 Interceptors on defense
+        game_state.attempt_spawn(INTERCEPTOR, [10, 3], num=3)
+        game_state.attempt_spawn(INTERCEPTOR, [17, 3], num=3)
 
     #####################################################################
     ######## FUNCTIONS THEY HAVE GIVEN US AND MAY PROVE USEFUL ##########
