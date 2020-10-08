@@ -181,7 +181,11 @@ class AlgoStrategy(gamelib.AlgoCore):
             game_state (GameState): The current GameState object
         """
 
-        pass
+        locs = [[20, 6], [6, 7]]
+
+        OffensiveInterceptorSpam().build_interceptor_spam_multiple_locs(
+            game_state, 3, locs
+        )
 
     def medium_strategy(self, game_state: GameState):
         """Executes the medium strategy.
@@ -205,7 +209,9 @@ class AlgoStrategy(gamelib.AlgoCore):
             game_state (GameState): The current GameState object
         """
 
-        pass
+        DefensiveWallStrat().build_h_wall_line(
+            game_state, (0, 13), game_state.ARENA_SIZE, right=True
+        )
 
     def starter_strategy(self, game_state):
         """
