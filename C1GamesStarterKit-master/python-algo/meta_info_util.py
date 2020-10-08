@@ -100,15 +100,15 @@ def get_structure_objects(
     return our_structures
 
 
-def get_structure_nums(game_state: GameState, player: int) -> dict:
-    """Returns a dict mapping structure type (name as str) to its count for the given player.
+def get_structure_dict(game_state: GameState, player: int) -> dict:
+    """Returns a dict mapping structure type (name as str) to its list for the given player.
 
     Args:
         game_state (GameState): The current game state object
         player (int): Either 0 (Us) or 1 (Enemy)
 
     Returns:
-        structures_map (dict): Maps structure type as str to their count
+        structures_map (dict): Maps structure type as str to their list
     """
 
     factories = get_structure_objects(game_state, game_state.FACTORY, player=player)
@@ -117,9 +117,9 @@ def get_structure_nums(game_state: GameState, player: int) -> dict:
 
     # Construct and return dict
     unit_mappings = {
-        game_state.FACTORY: len(factories),
-        game_state.TURRET: len(turrets),
-        game_state.WALL: len(walls),
+        game_state.FACTORY: factories,
+        game_state.TURRET: turrets,
+        game_state.WALL: walls,
     }
 
     return unit_mappings
