@@ -17,6 +17,8 @@ class Defense:
             self.create_our_regions()
         else:
             self.create_enemy_regions()
+        self.coordinate_regions = np.array(shape=(game_state.map.ARENA_SIZE, game_state.map.HALF_ARENA))
+
 
     def create_our_regions(self):
         self.regions[0] = Region([(0, 13), (7, 13), (7, 6)], self.player_id,
@@ -99,3 +101,4 @@ class Defense:
     def update_regions(self, game_state):
         for region in self.regions.values():
             region.update_structures(game_state.map)
+
