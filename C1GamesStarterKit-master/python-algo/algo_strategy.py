@@ -19,6 +19,8 @@ from defensive_building_functions import (
     DefensiveTurretWallStrat,
 )
 
+from building_function_helper import factory_location_helper
+
 from defense import Defense
 
 from meta_info_util import (
@@ -69,6 +71,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         SP = 0
 
         # OUR INITIAL SETUP BELOW
+        self.turn = 0
+        self.health_diff = 0
         self.units = {}  # Dict mapping unit type to unit objects
         self.enemy_units = {}  # Same as above, for opponent
         self.scored_on_locations = []
@@ -92,29 +96,20 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # OUR TURN-DECISION-MAKING HERE
 
+        # Refresh meta-info
+        self.health_diff = health_differential(game_state)
+
         # Refresh units list
         self.units = get_structure_dict(game_state, player=0)
         self.enemy_units = get_structure_dict(game_state, player=1)
 
-        (mp_diff, sp_diff) = compute_factory_impact_differential(game_state)
-        if mp_diff < 0 or sp_diff < 0:
-            # We need to build more factories! Figure out why
-            opponent_struct_nums = get_structure_nums(game_state, 1)
-            if len(opponent_struct_nums[game_state.FACTORY]) > len(
-                self.units[game_state.FACTORY]
-            ):
-                # Simply because they have more - Catch up!
-                game_state.attempt_spawn(game_state.FACTORY, (0, 0))
-            else:
-                # Must be because they are upgrading faster - Catch up!
-                our_factories = self.units[game_state.FACTORY]
-                for factory in our_factories:
-                    if not factory.upgraded:
-                        num = game_state.attempt_upgrade((factory.x, factory.y))
-                        if num != 0:
-                            break  # Upgrade max 1 factory for now
+        # Factory Impact Differential
+        self.resolve_factory_impact_diff(game_state)
 
-        self.starter_strategy(game_state)
+        # Perform moves
+        self.choose_and_execute_strategy(game_state)
+
+        self.turn += 1
 
         game_state.submit_turn()  # Must be called at the end
 
@@ -122,6 +117,101 @@ class AlgoStrategy(gamelib.AlgoCore):
     NOTE: All the methods after this point are part of the sample starter-algo
     strategy and can safely be replaced for your custom algo.
     """
+
+    def resolve_factory_impact_diff(self, game_state: GameState) -> int:
+        """Evaluated the current Factory Impact Differential and accordingly builds/upgrades factories.
+
+        Args:
+            game_state (GameState): The current GameState object
+
+        Returns:
+            num_improved (int): The number of factories built/upgraded
+        """
+
+        # For now just build or upgrade 1
+        (mp_diff, sp_diff) = compute_factory_impact_differential(game_state)
+        if mp_diff < 0 or sp_diff < 0:
+            # We are behind! Figure out why
+            our_factories = self.units[game_state.FACTORY]
+            opponent_factories = self.enemy_units[game_state.FACTORY]
+
+            if len(opponent_factories) > len(our_factories):
+                # They simply have more - Catch up!
+                loc = factory_location_helper(game_state)
+                num = game_state.attempt_spawn(game_state.FACTORY, loc)
+            else:
+                # Must be because they are upgrading faster - Catch up!
+                for factory in our_factories:
+                    if not factory.upgraded:
+                        num = game_state.attempt_upgrade((factory.x, factory.y))
+                        if num != 0:
+                            break  # Upgrade max 1 factory for now
+
+        return num
+
+    def choose_and_execute_strategy(self, game_state: GameState):
+        """Wrapper to choose and execute a strategy based on the game state.
+
+        Args:
+            game_state (GameState): The current GameState object
+        """
+
+        # TODO
+
+        # Choose a strategy (aggressive, medium, passive)
+        aggressive = False
+        medium = False
+        passive = False
+
+        # Execute it
+        if aggressive:
+            self.aggressive_strategy(game_state)
+        elif medium:
+            self.medium_strategy(game_state)
+        elif passive:
+            self.passive_strategy(game_state)
+
+        # For now:
+        self.starter_strategy(game_state)
+
+    def aggressive_strategy(self, game_state: GameState):
+        """Executes the aggressive strategy.
+
+        Args:
+            game_state (GameState): The current GameState object
+        """
+
+        locs = [[20, 6], [6, 7]]
+
+        OffensiveInterceptorSpam().build_interceptor_spam_multiple_locs(
+            game_state, 3, locs
+        )
+
+    def medium_strategy(self, game_state: GameState):
+        """Executes the medium strategy.
+
+        Args:
+            game_state (GameState): The current GameState object
+        """
+
+        DefensiveTurretWallStrat().build_turret_wall_pair(
+            game_state,
+            (13, 12),
+            game_state.get_resource(game_state.SP),
+            above=True,
+            right=True,
+        )
+
+    def passive_strategy(self, game_state: GameState):
+        """Executes the passive strategy.
+
+        Args:
+            game_state (GameState): The current GameState object
+        """
+
+        DefensiveWallStrat().build_h_wall_line(
+            game_state, (0, 13), game_state.ARENA_SIZE, right=True
+        )
 
     def starter_strategy(self, game_state):
         """
