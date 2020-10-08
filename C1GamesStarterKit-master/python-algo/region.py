@@ -69,6 +69,7 @@ class Region:
                     self[x, y][0] = 1
             self.coordinates.append(hlist)
 
+        self.tile_count = sum(len(hcoords) for hcoords in self.coordinates)
         # assigns edge coordinates to zero
         self.all_boundaries = set([self.edge_coordinates(edge) for edge in self.edges])
         for coord in self.all_boundaries:
@@ -299,9 +300,35 @@ class Region:
         for coord in path:
             damage += self.damage_regions[self.zero_coordinates(coord)] * 1 / unit_speed
 
-    def calculate_region_cost(self):
-        # TBA
-        return None
+    def average_tile_damage(self):
+        total_damage = 0
+        tiles = 0
+        for hcoords in self.coordinates:
+            for coord in hcoords:
+                tiles += 1
+                total_damage += self.damage_regions[self.zero_coordinates(coord)]
+        return total_damage / tiles
+
+    def calculate_region_cost(self, health_prorated=True):
+        cost = 0
+        for units in self.units.values():
+            for unit in units:
+                if health_prorated:
+                    cost += ( unit.health / unit.max_health ) * unit.cost[0] # cost in structure points
+                else:
+                    cost += unit.cost[0]
+        return cost
+
+    def undefended_tiles(self):
+        undefended = 0
+        for hcoords in self.coordinates:
+            for coord in hcoords:
+                if self.damage_regions[self.zero_coordinates(coord)] == 0:
+                    undefended += 1
+
+        return undefended
+
+
 
     def update_history(self):
         return None
