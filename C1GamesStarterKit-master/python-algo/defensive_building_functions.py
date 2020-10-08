@@ -16,7 +16,6 @@ class DefensiveWallStrat:
         starting_location: (int, int) or [[int]],
         length: int,
         right: bool = True,
-        ignore_boundaries: bool = True,
     ) -> int:
         """
         Used for placing a horizontal line of walls
@@ -24,7 +23,6 @@ class DefensiveWallStrat:
         @param starting_location: (x, y) or [[x, y]]
         @param length: duh
         @param right: whether the wall goes right or left of the starting location
-        @param ignore_boundaries: whether to care about boundaries
         @return: num_walls: The number of walls actually built
         """
 
@@ -61,7 +59,6 @@ class DefensiveWallStrat:
         length: int,
         wall_id: int,
         right: bool = True,
-        ignore_boundaries: bool = True,
     ):
         """
         Meant only for simulating future states.
@@ -71,7 +68,6 @@ class DefensiveWallStrat:
         @param length: length of the wall
         @param wall_id: The type/id of the wall, constant provided in algo_strategy.py
         @param right: whether the wall goes right or left of the starting location
-        @param ignore_boundaries: whether to care about boundaries
         @return: nothing
         """
 
@@ -145,8 +141,7 @@ class DefensiveTurretWallStrat:
 
         # Can build Turret and wall(s)
 
-        game_state.attempt_spawn(game_state.TURRET, turret_location)
-        built += 1
+        built += game_state.attempt_spawn(game_state.TURRET, turret_location)
 
         # Build the wall(s)
         for wo in wall_offsets:
@@ -154,8 +149,7 @@ class DefensiveTurretWallStrat:
                 wo[0] + turret_location[0],
                 wo[1] + turret_location[1],
             ]
-            game_state.attempt_spawn(game_state.WALL, coord)
-            built += 1
+            built += game_state.attempt_spawn(game_state.WALL, coord)
 
         return built
 
