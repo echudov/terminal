@@ -106,7 +106,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Factory Impact Differential
         self.resolve_factory_impact_diff(game_state)
 
-        self.starter_strategy(game_state)
+        # Perform moves
+        self.choose_and_execute_strategy(game_state)
 
         self.turn += 1
 
@@ -147,6 +148,64 @@ class AlgoStrategy(gamelib.AlgoCore):
                             break  # Upgrade max 1 factory for now
 
         return num
+
+    def choose_and_execute_strategy(self, game_state: GameState):
+        """Wrapper to choose and execute a strategy based on the game state.
+
+        Args:
+            game_state (GameState): The current GameState object
+        """
+
+        # TODO
+
+        # Choose a strategy (aggressive, medium, passive)
+        aggressive = False
+        medium = False
+        passive = False
+
+        # Execute it
+        if aggressive:
+            self.aggressive_strategy(game_state)
+        elif medium:
+            self.medium_strategy(game_state)
+        elif passive:
+            self.passive_strategy(game_state)
+
+        # For now:
+        self.starter_strategy(game_state)
+
+    def aggressive_strategy(self, game_state: GameState):
+        """Executes the aggressive strategy.
+
+        Args:
+            game_state (GameState): The current GameState object
+        """
+
+        pass
+
+    def medium_strategy(self, game_state: GameState):
+        """Executes the medium strategy.
+
+        Args:
+            game_state (GameState): The current GameState object
+        """
+
+        DefensiveTurretWallStrat().build_turret_wall_pair(
+            game_state,
+            (13, 12),
+            game_state.get_resource(game_state.SP),
+            above=True,
+            right=True,
+        )
+
+    def passive_strategy(self, game_state: GameState):
+        """Executes the passive strategy.
+
+        Args:
+            game_state (GameState): The current GameState object
+        """
+
+        pass
 
     def starter_strategy(self, game_state):
         """
