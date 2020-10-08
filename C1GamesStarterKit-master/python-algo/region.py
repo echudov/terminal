@@ -2,10 +2,18 @@ import gamelib
 import matplotlib.path as mplPath
 import numpy as np
 
-class Region:
 
-    def __init__(self, vertices: list, player_id: int, incoming_edges: list, outgoing_edges:
-                    list, breach_edges: list, map: gamelib.GameMap, damage_regions=None) -> object:
+class Region:
+    def __init__(
+        self,
+        vertices: list,
+        player_id: int,
+        incoming_edges: list,
+        outgoing_edges: list,
+        breach_edges: list,
+        map: gamelib.GameMap,
+        damage_regions=None,
+    ) -> object:
         """
         Initializes a general region to keep track of units.  Should only be initialized once at the beginning of the game since it's expensive to calculate.
         @type map: gamelib.GameMap
@@ -28,17 +36,23 @@ class Region:
         self.units = {"TURRET": [], "FACTORY": [], "WALL": []}
 
         # region bounds
-        self.xbounds = min(v[0] for v in self.vertices), max(v[0] for v in self.vertices)
+        self.xbounds = min(v[0] for v in self.vertices), max(
+            v[0] for v in self.vertices
+        )
         self.xwidth = self.xbounds[1] - self.xbounds[0]
         self.ywidth = self.ybounds[1] - self.ybounds[0]
-        self.ybounds = min(v[1] for v in self.vertices), max(v[1] for v in self.vertices)
+        self.ybounds = min(v[1] for v in self.vertices), max(
+            v[1] for v in self.vertices
+        )
 
         # each value in the grid looks like (int, units)
         # the first # is the type of coordinate:
         # -1: invalid coordinate, 0: edge, 1: inside
         # the second is the stationary unit contained in the cell
         # the [] operator accesses values from this grid
-        self.grid = np.full(shape=(self.xwidth, self.ywidth), fill_value=(-1, None), dtype=(int, object))
+        self.grid = np.full(
+            shape=(self.xwidth, self.ywidth), fill_value=(-1, None), dtype=(int, object)
+        )
 
         # boolean to determine if we need to recalculate our paths from edge to edge based on new buildings being built
         self.recalculate_paths = True
@@ -49,25 +63,28 @@ class Region:
         for y in range(self.ybounds[0], self.ybounds[1] + 1):
             hlist = []
             for x in range(self.xbounds[0], self.xbounds[1] + 1):
-                    if polygon_path.contains_point((x, y)):
-                        hlist.append((x, y))
-                        self[x, y][0] = 1
+                if polygon_path.contains_point((x, y)):
+                    hlist.append((x, y))
+                    self[x, y][0] = 1
             self.coordinates.append(hlist)
 
         # assigns edge coordinates to zero
         self.all_boundaries = set([self.edge_coordinates(edge) for edge in self.edges])
         for coord in self.all_boundaries:
-                self[coord][0] = 0
+            self[coord][0] = 0
 
         # calculates the damage regions
         if damage_regions is None:
-            self.damage_regions = np.full(shape=(self.xwidth, self.ywidth), fill_value=0)
+            self.damage_regions = np.full(
+                shape=(self.xwidth, self.ywidth), fill_value=0
+            )
             self.calculate_local_damage_regions(map)
             # to access you must shift the coordinate with zero_coordinates
         else:
-            self.damage_regions = damage_regions[self.xbounds[0]:(self.xbounds[1] + 1),
-                                  self.ybounds[0]:(self.ybounds[1] + 1)]
-
+            self.damage_regions = damage_regions[
+                self.xbounds[0] : (self.xbounds[1] + 1),
+                self.ybounds[0] : (self.ybounds[1] + 1),
+            ]
 
     def __getitem__(self, key: list or tuple) -> (int, gamelib.unit):
         """
@@ -119,15 +136,25 @@ class Region:
             start, finish = finish, start
         # if the line is horizontal
         if start[0] == finish[0]:
-            return [(start[0], min(start[1], finish[1]) + i) for i in range(abs(finish[1] - start[1]) + 1)]
+            return [
+                (start[0], min(start[1], finish[1]) + i)
+                for i in range(abs(finish[1] - start[1]) + 1)
+            ]
         # line is vertical
         if start[1] == finish[1]:
-            return [(min(start[0], finish[0]) + i, start[1]) for i in range(abs(finish[0] - start[0]) + 1)]
+            return [
+                (min(start[0], finish[0]) + i, start[1])
+                for i in range(abs(finish[0] - start[0]) + 1)
+            ]
         # line is upwards sloping
         if finish[1] - start[1] > 0:
-            return [(start[0] + i, start[1] + i) for i in range(finish[1] - start[1] + 1)]
+            return [
+                (start[0] + i, start[1] + i) for i in range(finish[1] - start[1] + 1)
+            ]
         else:
-            return [(start[0] - i, start[1] - i) for i in range(start[1] - finish[1] + 1)]
+            return [
+                (start[0] - i, start[1] - i) for i in range(start[1] - finish[1] + 1)
+            ]
 
     def update_structures(self, map: gamelib.GameMap) -> None:
         """
@@ -153,15 +180,15 @@ class Region:
                     self[coord[0], coord[1]][1] = unit
         self.recalculate_paths = True
 
-
     def update_damage_regions(self, damage_regions: np.array(float)) -> None:
         """
         Updates damage regions array based the entire map's damage regions array
         @param damage_regions: Array representing the amount of damage dealt at each coordinate
         """
-        self.damage_regions = damage_regions[self.xbounds[0]:(self.xbounds[1] + 1),
-                              self.ybounds[0]:(self.ybounds[1] + 1)]
-
+        self.damage_regions = damage_regions[
+            self.xbounds[0] : (self.xbounds[1] + 1),
+            self.ybounds[0] : (self.ybounds[1] + 1),
+        ]
 
     def calculate_local_damage_regions(self, map: gamelib.GameMap):
         """
@@ -173,8 +200,13 @@ class Region:
         if map is None:
             return
         for turret in self.units["TURRET"]:
-            for coord in map.get_locations_in_range((turret.x, turret.y), turret.attackRange):
-                if self.xbounds[1] >= coord[0] >= self.xbounds[0] and self.ybounds[1] >= coord[1] >= self.ybounds[0]:
+            for coord in map.get_locations_in_range(
+                (turret.x, turret.y), turret.attackRange
+            ):
+                if (
+                    self.xbounds[1] >= coord[0] >= self.xbounds[0]
+                    and self.ybounds[1] >= coord[1] >= self.ybounds[0]
+                ):
                     self.damage_regions[self.zero_coordinates(coord)] += turret.damage_i
 
     def zero_coordinates(self, coord: tuple or list):
@@ -220,7 +252,10 @@ class Region:
         Does BFS on each individual edge vertex
         **CAN BE OPTIMIZED FURTHER IF NEED BE**
         """
-        self.path_dict = {start: {end: [] for end in self.all_boundaries} for start in self.all_boundaries}
+        self.path_dict = {
+            start: {end: [] for end in self.all_boundaries}
+            for start in self.all_boundaries
+        }
         if self.recalculate_paths:
             for incoming_edge in self.incoming_edges:
                 for entrance in self.edge_coordinates(incoming_edge):
@@ -259,9 +294,8 @@ class Region:
         for coord in path:
             damage += self.damage_regions[self.zero_coordinates(coord)] * 1 / unit_speed
 
-
     def calculate_region_cost(self):
-        #TBA
+        # TBA
         return None
 
     def update_history(self):
