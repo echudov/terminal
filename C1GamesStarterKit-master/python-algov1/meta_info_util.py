@@ -116,9 +116,24 @@ def get_structure_dict(game_state: GameState, unit_enum_map: dict, player: int) 
         structures_map (dict): Maps structure type as str to their list
     """
 
-    factories = get_structure_objects(game_state, unit_enum_map, player=player)
-    turrets = get_structure_objects(game_state, unit_enum_map, player=player)
-    walls = get_structure_objects(game_state, unit_enum_map, player=player)
+    factories = get_structure_objects(
+        game_state,
+        unit_enum_map,
+        desired_structure_type=unit_enum_map["FACTORY"],
+        player=player,
+    )
+    turrets = get_structure_objects(
+        game_state,
+        unit_enum_map,
+        desired_structure_type=unit_enum_map["TURRET"],
+        player=player,
+    )
+    walls = get_structure_objects(
+        game_state,
+        unit_enum_map,
+        desired_structure_type=unit_enum_map["WALL"],
+        player=player,
+    )
 
     # Construct and return dict
     unit_mappings = {
@@ -148,7 +163,9 @@ def compute_factory_impact_differential(
     mp_diff = 0
     sp_diff = 0
 
-    factories = get_structure_objects(game_state, unit_enum_map["FACTORY"])
+    factories = get_structure_objects(
+        game_state, unit_enum_map, desired_structure_type=unit_enum_map["FACTORY"]
+    )
     for factory in factories:
         if factory.player_index == 0:
             # Ours
