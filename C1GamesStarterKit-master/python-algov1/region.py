@@ -362,7 +362,7 @@ class Region:
 
     def random_turret_placement(self, state: gamelib.GameState):
         loc = random.choice(list(self.coordinates))
-        while self.grid_type[loc] == -1 or self.grid_unit[loc] is not None:
+        while self.grid_type[self.zero_coordinates(loc)] == -1 or self.grid_unit[self.zero_coordinates(loc)] is not None:
             loc = random.choice(list(self.coordinates))
         return loc
 
