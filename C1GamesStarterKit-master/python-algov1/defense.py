@@ -188,7 +188,7 @@ class Defense:
         @param coord: (x, y) coordinate to query
         @return: list of regions containing coordinate
         """
-        return self.coordinate_regions[self.offset_coord(coord)]
+        return self.coordinate_regions[tuple(self.offset_coord(coord))]
 
     def offset_coord(self, coord: list or tuple):
         """
