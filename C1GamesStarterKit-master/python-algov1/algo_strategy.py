@@ -78,6 +78,16 @@ class AlgoStrategy(gamelib.AlgoCore):
         MP = 1
         SP = 0
 
+        # Maps name as str to its actual enum - Used anywhere involving Units
+        self.UNIT_ENUM_MAP = {
+            "WALL": WALL,
+            "FACTORY": FACTORY,
+            "TURRET": TURRET,
+            "SCOUT": SCOUT,
+            "DEMOLISHER": DEMOLISHER,
+            "INTERCEPTOR": INTERCEPTOR,
+        }
+
     def on_turn(self, turn_state):
         """
         This function is called every turn with the game state wrapper as
@@ -105,8 +115,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.their_defense.update_defense(game_state)
 
         # Refresh units list
-        self.units = get_structure_dict(game_state, player=0)
-        self.enemy_units = get_structure_dict(game_state, player=1)
+        self.units = get_structure_dict(game_state, self.UNIT_ENUM_MAP, player=0)
+        self.enemy_units = get_structure_dict(game_state, self.UNIT_ENUM_MAP, player=1)
 
         # Factory Impact Differential
         self.resolve_factory_impact_diff(game_state)
@@ -133,7 +143,7 @@ class AlgoStrategy(gamelib.AlgoCore):
             num_improved (int): The number of factories built/upgraded
         """
 
-        # At start of game, won't have any factories
+        # At start of game, won't have any factories (Edge case)
         if FACTORY not in self.units:
             return
 
@@ -203,7 +213,10 @@ class AlgoStrategy(gamelib.AlgoCore):
         locs = [[20, 6], [6, 7]]
 
         OffensiveInterceptorSpam().build_interceptor_spam_multiple_locs(
-            game_state, game_state.number_affordable(INTERCEPTOR), locs
+            game_state,
+            self.UNIT_ENUM_MAP,
+            game_state.number_affordable(INTERCEPTOR),
+            locs,
         )
 
     def medium_strategy(self, game_state: GameState):
@@ -217,18 +230,24 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         DefensiveTurretWallStrat().build_turret_wall_pair(
             game_state,
+            self.UNIT_ENUM_MAP,
             (13, 12),
             game_state.get_resource(SP),
             above=True,
             right=True,
         )
 
-        OffensiveDemolisherLine().build_demolisher_line(game_state, 1, (5, 5))
+        OffensiveDemolisherLine().build_demolisher_line(
+            game_state, self.UNIT_ENUM_MAP, 1, (5, 5)
+        )
 
         locs = [[20, 6], [6, 7]]
 
         OffensiveInterceptorSpam().build_interceptor_spam_multiple_locs(
-            game_state, game_state.number_affordable(INTERCEPTOR), locs
+            game_state,
+            self.UNIT_ENUM_MAP,
+            game_state.number_affordable(INTERCEPTOR),
+            locs,
         )
 
     def passive_strategy(self, game_state: GameState):
@@ -241,7 +260,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         # TODO
 
         DefensiveWallStrat().build_h_wall_line(
-            game_state, (0, 13), game_state.ARENA_SIZE, right=True
+            game_state, self.UNIT_ENUM_MAP, (0, 13), game_state.ARENA_SIZE, right=True
         )
 
     def starting_strategy(self, game_state: GameState):

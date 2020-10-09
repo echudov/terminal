@@ -4,29 +4,33 @@ from region import Region
 
 
 class Defense:
-    def __init__(self, player_id: int):
+    def __init__(self, unit_enum_map: dict, player_id: int):
         """
         Initializes defense with multiple predetermined regions.
+        unit_enum_map (dict): Maps NAME to unit enum
         @param player_id: Number representing which player this defense is for 0 - us, 1 - opponent
         @param game_state: passes current game_state as GameState object
         """
         self.regions = {}
         self.region_count = 6
         self.player_id = player_id
-        self.damage_regions = np.zeros(
-            shape=(28, 14)
-        )
+        self.damage_regions = np.zeros(shape=(28, 14))
         if player_id == 0:
-            self.create_our_regions()
+            self.create_our_regions(unit_enum_map)
         else:
-            self.create_enemy_regions()
+            self.create_enemy_regions(unit_enum_map)
         self.coordinate_regions = [[[] for y in range(14)] for x in range(28)]
         self.history = []
-        self.units = {"TURRET": set(), "FACTORY": set(), "WALL": set()}
+        self.units = {
+            unit_enum_map["TURRET"]: set(),
+            unit_enum_map["FACTORY"]: set(),
+            unit_enum_map["WALL"]: set(),
+        }
         self.states = {}
 
-    def create_our_regions(self):
+    def create_our_regions(self, unit_enum_map: dict):
         self.regions[0] = Region(
+            unit_enum_map,
             [(0, 13), (7, 13), (7, 6)],
             self.player_id,
             incoming_edges=[((0, 13), (7, 13)), ((7, 13), (7, 6))],
@@ -36,6 +40,7 @@ class Defense:
             damage_regions=self.damage_regions,
         )
         self.regions[1] = Region(
+            unit_enum_map,
             [(27, 13), (20, 13), (20, 6)],
             self.player_id,
             incoming_edges=[((20, 13), (27, 13)), ((20, 13), (20, 6))],
@@ -45,6 +50,7 @@ class Defense:
             damage_regions=self.damage_regions,
         )
         self.regions[2] = Region(
+            unit_enum_map,
             [(7, 6), (7, 13), (14, 13)],
             self.player_id,
             incoming_edges=[((7, 6), (7, 13)), ((7, 13), (14, 13))],
@@ -54,6 +60,7 @@ class Defense:
             damage_regions=self.damage_regions,
         )
         self.regions[3] = Region(
+            unit_enum_map,
             [(13, 13), (20, 13), (20, 6)],
             self.player_id,
             incoming_edges=[((13, 13), (20, 13)), ((20, 13), (20, 6))],
@@ -63,6 +70,7 @@ class Defense:
             damage_regions=self.damage_regions,
         )
         self.regions[4] = Region(
+            unit_enum_map,
             [(7, 6), (13, 12), (14, 12), (20, 6)],
             self.player_id,
             incoming_edges=[
@@ -76,6 +84,7 @@ class Defense:
             damage_regions=self.damage_regions,
         )
         self.regions[5] = Region(
+            unit_enum_map,
             [(7, 6), (20, 6), (14, 0), (13, 0)],
             self.player_id,
             incoming_edges=[((7, 6), (20, 6))],
@@ -85,8 +94,9 @@ class Defense:
             damage_regions=self.damage_regions,
         )
 
-    def create_enemy_regions(self):
+    def create_enemy_regions(self, unit_enum_map: dict):
         self.regions[0] = Region(
+            unit_enum_map,
             [(0, 14), (7, 14), (7, 21)],
             self.player_id,
             incoming_edges=[((0, 14), (7, 14)), ((7, 14), (7, 21))],
@@ -96,6 +106,7 @@ class Defense:
             damage_regions=self.damage_regions,
         )
         self.regions[1] = Region(
+            unit_enum_map,
             [(20, 14), (20, 21), (27, 14)],
             self.player_id,
             incoming_edges=[((20, 14), (20, 21)), ((20, 14), (27, 14))],
@@ -105,6 +116,7 @@ class Defense:
             damage_regions=self.damage_regions,
         )
         self.regions[2] = Region(
+            unit_enum_map,
             [(7, 14), (7, 21), (14, 14)],
             self.player_id,
             incoming_edges=[((7, 14), (14, 14)), ((7, 14), (7, 21))],
@@ -114,6 +126,7 @@ class Defense:
             damage_regions=self.damage_regions,
         )
         self.regions[3] = Region(
+            unit_enum_map,
             [(13, 14), (20, 21), (20, 14)],
             self.player_id,
             incoming_edges=[((13, 14), (20, 14)), ((20, 14), (20, 21))],
@@ -123,6 +136,7 @@ class Defense:
             damage_regions=self.damage_regions,
         )
         self.regions[4] = Region(
+            unit_enum_map,
             [(7, 21), (13, 15), (14, 15), (20, 21)],
             self.player_id,
             incoming_edges=[
@@ -136,6 +150,7 @@ class Defense:
             damage_regions=self.damage_regions,
         )
         self.regions[5] = Region(
+            unit_enum_map,
             [(7, 21), (13, 27), (14, 27), (20, 21)],
             self.player_id,
             incoming_edges=[((7, 21), (20, 21))],
@@ -149,12 +164,13 @@ class Defense:
             damage_regions=self.damage_regions,
         )
 
-    def on_new_round(self, game_state: gamelib.GameState):
+    def on_new_round(self, unit_enum_map: dict, game_state: gamelib.GameState):
         """
         Updates relevant values
+        unit_enum_map (dict): Maps NAME to unit enum
         @param game_state: GameState value to update with
         """
-        self.update_defense(game_state)
+        self.update_defense(unit_enum_map, game_state)
 
     def initialize_coordinate_regions(self):
         """
@@ -162,7 +178,9 @@ class Defense:
         """
         for i in range(len(self.regions)):
             for coordinate in sum(self.regions[i].coordinates):
-                self.coordinate_regions[self.offset_coord(self.offset_coord(coordinate))].append(i)
+                self.coordinate_regions[
+                    self.offset_coord(self.offset_coord(coordinate))
+                ].append(i)
 
     def get_region(self, coord: list or tuple):
         """
@@ -183,15 +201,23 @@ class Defense:
         else:
             return coord
 
-    def update_defense(self, game_state: gamelib.GameState):
+    def update_defense(self, unit_enum_map: dict, game_state: gamelib.GameState):
         """
         Updates defense values
         @param game_state: GameState to update with
         """
         # for simulating unit traversals in region
-        units = ["DEMOLISHER", "SCOUT", "INTERCEPTOR"]
+        units = [
+            unit_enum_map["DEMOLISHER"],
+            unit_enum_map["SCOUT"],
+            unit_enum_map["INTERCEPTOR"],
+        ]
         # resets units
-        self.units = {"TURRET": set(), "FACTORY": set(), "WALL": set()}
+        self.units = {
+            unit_enum_map["TURRET"]: set(),
+            unit_enum_map["FACTORY"]: set(),
+            unit_enum_map["WALL"]: set(),
+        }
         for i, region in self.regions.items():
             region.update_structures(game_state.game_map)
             # iterate through the units to add to the overall game state
@@ -204,20 +230,26 @@ class Defense:
                 if not unit:
                     continue
                 unit = unit[0]
-                if unit.unit_type == "WALL" or unit.unit_type == "TURRET" or unit.unit_type == "FACTORY":
+                if (
+                    unit.unit_type == unit_enum_map["WALL"]
+                    or unit.unit_type == unit_enum_map["TURRET"]
+                    or unit.unit_type == unit_enum_map["FACTORY"]
+                ):
                     self.units[unit.unit_type] = unit
-
 
     def get_defense_undefended_tiles(self):
         """
         Updates defense tiles
         @return: list of undefended tiles
         """
-        return {i : self.states[i]["UNDEFENDED TILES"] for i in range(self.region_count)}
+        return {i: self.states[i]["UNDEFENDED TILES"] for i in range(self.region_count)}
 
-    def calculate_total_cost(self, defensive_only=True, health_prorated=True):
+    def calculate_total_cost(
+        self, unit_enum_map: dict, defensive_only=True, health_prorated=True
+    ):
         """
         Calculates the total cost of all units
+        unit_enum_map (dict): Maps NAME to unit enum
         @param defensive_only: Whether to only look at defensive units
         @param health_prorated: Whether to prorate cost by remaining health
         @return: total cost
@@ -225,11 +257,12 @@ class Defense:
         cost = 0
         for units in self.units.values():
             for unit in units:
-                if defensive_only and unit.unit_type == "FACTORY":
+                if defensive_only and unit.unit_type == unit_enum_map["FACTORY"]:
                     continue
                 if health_prorated:
-                    cost += (unit.health / unit.max_health) * unit.cost[0]  # cost in structure points
+                    cost += (unit.health / unit.max_health) * unit.cost[
+                        0
+                    ]  # cost in structure points
                 else:
                     cost += unit.cost[0]
         return cost
-

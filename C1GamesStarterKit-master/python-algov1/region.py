@@ -5,6 +5,7 @@ import numpy as np
 class Region:
     def __init__(
         self,
+        unit_enum_map: dict,
         vertices: list,
         player_id: int,
         incoming_edges: list,
@@ -15,6 +16,7 @@ class Region:
     ) -> object:
         """
         Initializes a general region to keep track of units.  Should only be initialized once at the beginning of the game since it's expensive to calculate.
+        unit_enum_map (dict): Maps NAME to unit enum
         @type map: gamelib.GameMap
         @param vertices: list of tuples containing (x, y) coordinates for the region's vertices
         @param player_id: player_id of region (0 - us, 1 - opponent)
@@ -32,7 +34,11 @@ class Region:
         self.edges = set(incoming_edges + outgoing_edges + breach_edges)
 
         # dictionary containing unit types in region
-        self.units = {"TURRET": [], "FACTORY": [], "WALL": []}
+        self.units = {
+            unit_enum_map["TURRET"]: [],
+            unit_enum_map["FACTORY"]: [],
+            unit_enum_map["WALL"]: [],
+        }
 
         # region bounds
         self.xbounds = min(v[0] for v in self.vertices), max(
@@ -53,7 +59,9 @@ class Region:
         self.grid_type = np.full(
             shape=(self.xwidth, self.ywidth), fill_value=-1, dtype=object
         )
-        self.grid_unit = np.full(shape=(self.xwidth, self.ywidth), fill_value=None, dtype=gamelib.GameUnit)
+        self.grid_unit = np.full(
+            shape=(self.xwidth, self.ywidth), fill_value=None, dtype=gamelib.GameUnit
+        )
 
         # boolean to determine if we need to recalculate our paths from edge to edge based on new buildings being built
         self.recalculate_paths = True
@@ -78,10 +86,8 @@ class Region:
             self[coord][0] = 0
 
         # calculates the damage regions
-        self.damage_regions = np.full(
-            shape=(self.xwidth, self.ywidth), fill_value=0
-        )
-        self.calculate_local_damage_regions(map)
+        self.damage_regions = np.full(shape=(self.xwidth, self.ywidth), fill_value=0)
+        self.calculate_local_damage_regions(unit_enum_map, map)
         # to access you must shift the coordinate with zero_coordinates
 
     def __getitem__(self, key: list or tuple) -> (int, gamelib.unit):
@@ -90,7 +96,10 @@ class Region:
         @param key: tuple representing (x, y) coordinate on the regular map
         @return: Tuple representing information about the region grid at the coordinate
         """
-        return [self.grid_type[self.zero_coordinates(key)], self.grid_unit[self.zero_coordinates(key)]]
+        return [
+            self.grid_type[self.zero_coordinates(key)],
+            self.grid_unit[self.zero_coordinates(key)],
+        ]
 
     def __setitem__(self, key: list or tuple, value: (int, gamelib.unit)) -> None:
         """
@@ -158,9 +167,10 @@ class Region:
                 (start[0] - i, start[1] - i) for i in range(start[1] - finish[1] + 1)
             ]
 
-    def update_structures(self, map: gamelib.GameMap) -> None:
+    def update_structures(self, unit_enum_map: dict, map: gamelib.GameMap) -> None:
         """
         Updates structures dictionary based on the current map
+        unit_enum_map (dict): Maps NAME to unit enum
         @param map: map to base updates off of
         """
         # iterate through each valid tile inside the triangle to see what structure is in it
@@ -171,13 +181,13 @@ class Region:
                     self[coord[0], coord[1]][1] = None
                     continue
                 unit = unit[0]
-                if unit.unit_type == "TURRET":
+                if unit.unit_type == unit_enum_map["TURRET"]:
                     self.units[unit.unit_type].append(unit)
                     self[coord[0], coord[1]][1] = unit
-                elif unit.unit_type == "FACTORY":
+                elif unit.unit_type == unit_enum_map["FACTORY"]:
                     self.units[unit.unit_type].append(unit)
                     self[coord[0], coord[1]][1] = unit
-                elif unit.unit_type == "WALL":
+                elif unit.unit_type == unit_enum_map["WALL"]:
                     self.units[unit.unit_type].append(unit)
                     self[coord[0], coord[1]][1] = unit
         self.recalculate_paths = True
@@ -192,17 +202,19 @@ class Region:
             self.ybounds[0] : (self.ybounds[1] + 1),
         ]
 
-    def calculate_local_damage_regions(self, game_map: gamelib.GameMap):
+    def calculate_local_damage_regions(
+        self, unit_enum_map: dict, game_map: gamelib.GameMap
+    ):
         """
         Calculates the damage regions array based on only this region's structures
-        Different from regular as it helps figure out the impact from only the buildings in this region, not
-        others near it
+        Different from regular as it helps figure out the impact from only the buildings in this region, not others near it
+        unit_enum_map (dict): Maps NAME to unit enum
         @param game_map: GameMap representing the current state
         """
         if game_map is None:
             return
 
-        for turret in self.units["TURRET"]:
+        for turret in self.units[unit_enum_map["TURRET"]]:
             for coord in game_map.get_locations_in_range(
                 (turret.x, turret.y), turret.attackRange
             ):
@@ -238,7 +250,10 @@ class Region:
             left = (s[0] - 1, s[1])
             adjacents = [above, below, right, left]
             for adj in adjacents:
-                if self.xbounds[0] <= adj[0] <= self.xbounds[1] and self.ybounds[0] <= adj[1] <= self.ybounds[1]:
+                if (
+                    self.xbounds[0] <= adj[0] <= self.xbounds[1]
+                    and self.ybounds[0] <= adj[1] <= self.ybounds[1]
+                ):
                     if self[adj][0] >= 0 and not visited[self.zero_coordinates(adj)]:
                         visited[self.zero_coordinates(adj)] = True
                     if self[adj][1] is None:
@@ -266,10 +281,11 @@ class Region:
                     visited = np.full((self.xwidth, self.ywidth), False)
                     self.bfs(entrance, visited, self.path_dict)
 
-    def simulate_average_damage(self, unit: str):
+    def simulate_average_damage(self, unit_enum_map: dict, unit: str):
         """
         Simulates the average damage units would take if they entered this region and
         left it at all possible entrances and exits.
+        unit_enum_map (dict): Maps NAME to unit enum
         @param unit: Gamelib Unit.  Must be mobile
         @return: Average damage taken across all possible paths
         """
@@ -278,11 +294,11 @@ class Region:
         # calculate paths to each edge
         self.calculate_paths()
         # iterate through all edges
-        if unit == "DEMOLISHER":
+        if unit == unit_enum_map["DEMOLISHER"]:
             speed = 2
-        elif unit == "SCOUT":
+        elif unit == unit_enum_map["SCOUT"]:
             speed = 1
-        elif unit == "INTERCEPTOR":
+        elif unit == unit_enum_map["INTERCEPTOR"]:
             speed = 4
         for incoming_edge in self.incoming_edges:
             for entrance in self.edge_coordinates(incoming_edge):
@@ -316,23 +332,27 @@ class Region:
                 total_damage += self.damage_regions[self.zero_coordinates(coord)]
         return total_damage / self.tile_count
 
-    def calculate_region_cost(self, health_prorated=True, defensive_only=False):
+    def calculate_region_cost(
+        self, unit_enum_map: dict, health_prorated=True, defensive_only=False
+    ):
         cost = 0
         for units in self.units.values():
             for unit in units:
-                if defensive_only and unit.unit_type == "FACTORY":
+                if defensive_only and unit.unit_type == unit_enum_map["FACTORY"]:
                     continue
                 if health_prorated:
-                    cost += ( unit.health / unit.max_health ) * unit.cost[0] # cost in structure points
+                    cost += (unit.health / unit.max_health) * unit.cost[
+                        0
+                    ]  # cost in structure points
                 else:
                     cost += unit.cost[0]
         return cost
 
-    def calculate_overall_health(self, defensive_only=True):
+    def calculate_overall_health(self, unit_enum_map: dict, defensive_only=True):
         health = 0
         for units in self.units.values():
             for unit in units:
-                if defensive_only and unit.unit_type == "FACTORY":
+                if defensive_only and unit.unit_type == unit_enum_map["FACTORY"]:
                     continue
                 health += unit.health
         return health
@@ -345,15 +365,21 @@ class Region:
                     undefended.append(coord)
         return undefended
 
-    def calculate_region_states(self, units):
+    def calculate_region_states(self, unit_enum_map: dict, units):
         states = {}
         states["AVG TILE DMG"] = self.average_tile_damage()
-        states["REGION COST ALL"] = self.calculate_region_cost(defensive_only=False)
-        states["REGION COST DEF"] = self.calculate_region_cost(defensive_only=True)
-        states["OVERALL HEALTH ALL"] = self.calculate_overall_health(defensive_only=False)
-        states["OVERALL HEALTH DEF"] = self.calculate_overall_health(defensive_only=True)
+        states["REGION COST ALL"] = self.calculate_region_cost(unit_enum_map, defensive_only=False)
+        states["REGION COST DEF"] = self.calculate_region_cost(unit_enum_map, defensive_only=True)
+        states["OVERALL HEALTH ALL"] = self.calculate_overall_health(
+            unit_enum_map, defensive_only=False
+        )
+        states["OVERALL HEALTH DEF"] = self.calculate_overall_health(
+            unit_enum_map, defensive_only=True
+        )
         states["UNDEFENDED TILES"] = self.undefended_tiles()
-        states["SIMULATED DAMAGE"] = {unit : self.simulate_average_damage(unit) for unit in units}
+        states["SIMULATED DAMAGE"] = {
+            unit: self.simulate_average_damage(unit_enum_map, unit) for unit in units
+        }
         return states
 
     def point_inside_polygon(self, x, y, poly):
