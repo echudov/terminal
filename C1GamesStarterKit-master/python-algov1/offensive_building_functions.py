@@ -119,7 +119,7 @@ class OffensiveDemolisherLine:
         # Build a full line towards right of location (might overflow but fine)
         wall_num = 0
         wall_num = DefensiveWallStrat().build_h_wall_line(
-            game_state, location, game_state.ARENA_SIZE, right=True
+            game_state, unit_enum_map, location, game_state.ARENA_SIZE, right=True
         )
 
         # Build demolishers 1 tile behind

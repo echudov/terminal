@@ -130,13 +130,14 @@ def get_structure_dict(game_state: GameState, unit_enum_map: dict, player: int) 
     return unit_mappings
 
 
-def compute_factory_impact_differential(game_state: GameState) -> (int, int):
+def compute_factory_impact_differential(game_state: GameState, unit_enum_map: dict) -> (int, int):
     """Computes the factory impact differential between us and our opponent.
     This is the MP/SP production difference per turn as of this game state.
     If diff < 0, we are producing less of that resource type.
 
     Args:
         game_state: (GameState): The current game state object
+        unit_enum_map (dict): Maps NAME to unit enum
 
     Returns:
         factory_impact_diff (int, int): Tuple (MP-Diff, SP-Diff)
@@ -145,7 +146,7 @@ def compute_factory_impact_differential(game_state: GameState) -> (int, int):
     mp_diff = 0
     sp_diff = 0
 
-    factories = get_structure_objects(game_state, FACTORY)
+    factories = get_structure_objects(game_state, unit_enum_map["FACTORY"])
     for factory in factories:
         if factory.player_index == 0:
             # Ours

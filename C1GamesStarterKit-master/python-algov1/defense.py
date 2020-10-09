@@ -223,7 +223,7 @@ class Defense:
             # iterate through the units to add to the overall game state
             # we use a set because there is overlap of regions, we don't want to double count units
             # find the states of region i
-            self.states[i] = region.calculate_region_states(units)
+            self.states[i] = region.calculate_region_states(unit_enum_map, units)
         for x in range(game_state.ARENA_SIZE):
             for y in range(game_state.HALF_ARENA):
                 unit = game_state.game_map[x, y]
