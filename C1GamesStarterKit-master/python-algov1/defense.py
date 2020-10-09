@@ -219,7 +219,7 @@ class Defense:
             unit_enum_map["WALL"]: set(),
         }
         for i, region in self.regions.items():
-            region.update_structures(game_state.game_map)
+            region.update_structures(unit_enum_map, game_state.game_map)
             # iterate through the units to add to the overall game state
             # we use a set because there is overlap of regions, we don't want to double count units
             # find the states of region i
