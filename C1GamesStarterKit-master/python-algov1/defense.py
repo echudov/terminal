@@ -226,6 +226,8 @@ class Defense:
             self.states[i] = region.calculate_region_states(unit_enum_map, units)
         for x in range(game_state.ARENA_SIZE):
             for y in range(game_state.HALF_ARENA):
+                if not game_state.game_map.in_arena_bounds((x, y)):
+                    continue
                 unit = game_state.game_map[x, y]
                 if not unit:
                     continue

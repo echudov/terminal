@@ -77,7 +77,7 @@ class Region:
                     self.grid_type[self.zero_coordinates((x, y))] = 1
 
 
-        self.tile_count = sum(len(hcoords) for hcoords in self.coordinates)
+        self.tile_count = len(self.coordinates)
         # assigns edge coordinates to zero
 
 
@@ -87,6 +87,7 @@ class Region:
 
         # calculates the damage regions
         self.damage_regions = np.full(shape=(self.xwidth, self.ywidth), fill_value=0)
+
         self.units = {
             unit_enum_map["TURRET"]: [],
             unit_enum_map["FACTORY"]: [],
@@ -183,24 +184,23 @@ class Region:
         @param map: map to base updates off of
         """
         # iterate through each valid tile inside the triangle to see what structure is in it
-        for hcoords in self.coordinates:
-            for coord in hcoords:
-                if self.grid_type[self.zero_coordinates(coord)] == -1:
-                    continue
-                unit = map[coord[0], coord[1]]
-                if not unit:
-                    self[coord[0], coord[1]][1] = None
-                    continue
-                unit = unit[0]
-                if unit.unit_type == unit_enum_map["TURRET"]:
-                    self.units[unit.unit_type].append(unit)
-                    self.grid_unit[self.zero_coordinates(coord)] = unit
-                elif unit.unit_type == unit_enum_map["FACTORY"]:
-                    self.units[unit.unit_type].append(unit)
-                    self.grid_unit[self.zero_coordinates(coord)] = unit
-                elif unit.unit_type == unit_enum_map["WALL"]:
-                    self.units[unit.unit_type].append(unit)
-                    self.grid_unit[self.zero_coordinates(coord)] = unit
+        for coord in self.coordinates:
+            if self.grid_type[self.zero_coordinates(coord)] == -1:
+                continue
+            unit = map[coord[0], coord[1]]
+            if not unit:
+                self[coord[0], coord[1]][1] = None
+                continue
+            unit = unit[0]
+            if unit.unit_type == unit_enum_map["TURRET"]:
+                self.units[unit.unit_type].append(unit)
+                self.grid_unit[self.zero_coordinates(coord)] = unit
+            elif unit.unit_type == unit_enum_map["FACTORY"]:
+                self.units[unit.unit_type].append(unit)
+                self.grid_unit[self.zero_coordinates(coord)] = unit
+            elif unit.unit_type == unit_enum_map["WALL"]:
+                self.units[unit.unit_type].append(unit)
+                self.grid_unit[self.zero_coordinates(coord)] = unit
         self.recalculate_paths = True
 
     def update_damage_regions(self, damage_regions: np.array(float)) -> None:
@@ -250,15 +250,15 @@ class Region:
         @param visited: boolean array keeping track of which places have already been seen
         @param path_dict: dictionary containing all of the paths between two edge points
         """
-        queue = [[start]]
+        queue = [[list(start)]]
         visited[self.zero_coordinates(start)] = True
         while queue:
             path = queue.pop(0)
             s = path[-1]
-            above = (s[0], s[1] + 1)
-            below = (s[0], s[1] - 1)
-            right = (s[0] + 1, s[1])
-            left = (s[0] - 1, s[1])
+            above = [s[0], s[1] + 1]
+            below = [s[0], s[1] - 1]
+            right = [s[0] + 1, s[1]]
+            left = [s[0] - 1, s[1]]
             adjacents = [above, below, right, left]
             for adj in adjacents:
                 if (
@@ -270,8 +270,9 @@ class Region:
                     if self[adj][1] is None:
                         continue
                     if self[adj][0] == 0:
-                        path_dict[start][adj] = path.append(above)
-                        path_dict[adj][start] = reversed(path_dict[start][adj])
+                        path.append(above)
+                        path_dict[tuple(start)][tuple(adj)] = path
+                        path_dict[tuple(adj)][tuple(start)] = reversed(path)
                     else:
                         queue.append([path + above])
 
@@ -338,9 +339,8 @@ class Region:
         @return:
         """
         total_damage = 0
-        for hcoords in self.coordinates:
-            for coord in hcoords:
-                total_damage += self.damage_regions[self.zero_coordinates(coord)]
+        for coord in self.coordinates:
+            total_damage += self.damage_regions[self.zero_coordinates(coord)]
         return total_damage / self.tile_count
 
     def calculate_region_cost(
@@ -370,10 +370,9 @@ class Region:
 
     def undefended_tiles(self):
         undefended = []
-        for hcoords in self.coordinates:
-            for coord in hcoords:
-                if self.damage_regions[self.zero_coordinates(coord)] == 0:
-                    undefended.append(coord)
+        for coord in self.coordinates:
+            if self.damage_regions[self.zero_coordinates(coord)] == 0:
+                undefended.append(coord)
         return undefended
 
     def calculate_region_states(self, unit_enum_map: dict, units):
@@ -388,9 +387,11 @@ class Region:
             unit_enum_map, defensive_only=True
         )
         states["UNDEFENDED TILES"] = self.undefended_tiles()
+        '''
         states["SIMULATED DAMAGE"] = {
             unit: self.simulate_average_damage(unit_enum_map, unit) for unit in units
         }
+        '''
         return states
 
     def point_inside_polygon(self, x, y, poly):
