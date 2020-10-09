@@ -134,13 +134,13 @@ class AlgoStrategy(gamelib.AlgoCore):
         (mp_diff, sp_diff) = compute_factory_impact_differential(game_state)
         if mp_diff < 0 or sp_diff < 0:
             # We are behind! Figure out why
-            our_factories = self.units[game_state.FACTORY]
-            opponent_factories = self.enemy_units[game_state.FACTORY]
+            our_factories = self.units[FACTORY]
+            opponent_factories = self.enemy_units[FACTORY]
 
             if len(opponent_factories) > len(our_factories):
                 # They simply have more - Catch up!
                 loc = factory_location_helper(game_state)
-                num = game_state.attempt_spawn(game_state.FACTORY, loc)
+                num = game_state.attempt_spawn(FACTORY, loc)
             else:
                 # Must be because they are upgrading faster - Catch up!
                 for factory in our_factories:
@@ -168,7 +168,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Choose a strategy (aggressive, medium, passive)
         aggressive = (game_state.turn_number % 2) == 0
         medium = (game_state.turn_number % 2) == 0
-        passive = False
+        passive = are_losing(game_state)
 
         # Execute it
         if aggressive:
@@ -188,7 +188,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         locs = [[20, 6], [6, 7]]
 
         OffensiveInterceptorSpam().build_interceptor_spam_multiple_locs(
-            game_state, game_state.number_affordable(game_state.INTERCEPTOR), locs
+            game_state, game_state.number_affordable(INTERCEPTOR), locs
         )
 
     def medium_strategy(self, game_state: GameState):
@@ -201,7 +201,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         DefensiveTurretWallStrat().build_turret_wall_pair(
             game_state,
             (13, 12),
-            game_state.get_resource(game_state.SP),
+            game_state.get_resource(SP),
             above=True,
             right=True,
         )
@@ -211,7 +211,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         locs = [[20, 6], [6, 7]]
 
         OffensiveInterceptorSpam().build_interceptor_spam_multiple_locs(
-            game_state, game_state.number_affordable(game_state.INTERCEPTOR), locs
+            game_state, game_state.number_affordable(INTERCEPTOR), locs
         )
 
     def passive_strategy(self, game_state: GameState):
@@ -251,15 +251,15 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
 
         # 2 Walls on top edges
-        game_state.attempt_spawn(game_state.WALL, [[0, 13], [27, 13]])
+        game_state.attempt_spawn(WALL, [[0, 13], [27, 13]])
 
         # 4 Turrets
         game_state.attempt_spawn(
-            game_state.TURRET, [[3, 12], [7, 9], [24, 12], [20, 9], [11, 12]]
+            TURRET, [[3, 12], [7, 9], [24, 12], [20, 9], [11, 12]]
         )
 
         # 1 Factory and upgrade it
-        game_state.attempt_spawn(game_state.FACTORY, [13, 1])
+        game_state.attempt_spawn(FACTORY, [13, 1])
         game_state.attempt_upgrade([13, 1])
 
         # 5 Interceptors on defense
@@ -289,7 +289,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
 
         # Build 2nd Factory
-        game_state.attempt_spawn(game_state.FACTORY, [14, 1])
+        game_state.attempt_spawn(FACTORY, [14, 1])
         # Save rest of SP
 
         # Build wall in front of every turret
