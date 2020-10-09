@@ -57,6 +57,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.enemy_units = {}  # Same as above, fo
         # r opponent
         self.units = {}  # Dict mapping unit type to unit objects
+        self.regions_attacked = {i : [] for i in range(6)}
         seed = random.randrange(maxsize)
         random.seed(seed)
         gamelib.debug_write("Random seed: {}".format(seed))
@@ -356,7 +357,14 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # TODO Check this!
 
-        self.update_scored_on_locations(turn_state)
+        self.on_action_frame(turn_state)
+
+        attacked_region = max(self.regions_attacked, key=self.regions_attacked.get)
+
+        placement = self.regions[attacked_region].random_turret_placement(game_state)
+
+        DefensiveTurretWallStrat().build_turret_wall_pair(game_state, self.UNIT_ENUM_MAP, placement, game_state.get_resource[0])
+
         for location in self.scored_on_locations:
             build_location = [location[0], location[1]]
             if game_state.can_spawn(TURRET, build_location):
@@ -439,7 +447,7 @@ class AlgoStrategy(gamelib.AlgoCore):
                 filtered.append(location)
         return filtered
 
-    def update_scored_on_locations(self, turn_string: str):
+    def on_action_frame(self, action_frame_game_state: str):
         """
         This is the action frame of the game. This function could be called
         hundreds of times per turn and could slow the algo down so avoid putting slow code here.
@@ -448,9 +456,17 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
 
         # Let's record at what position we get scored on
-        state = json.loads(turn_string)
+        state = json.loads(action_frame_game_state)
         events = state["events"]
         breaches = events["breach"]
+        self_destructs = events["selfDestruct"]
+        p2units = state["p2Units"]
+        for unit_num in range(3, 6):
+            unit = p2units[unit_num]
+            if unit[1] < 14:
+                region = self.our_defense.get_region([unit[0], unit[1]])
+                self.regions_attacked[region] += 1
+
         for breach in breaches:
             location = breach[0]
             unit_owner_self = True if breach[4] == 1 else False

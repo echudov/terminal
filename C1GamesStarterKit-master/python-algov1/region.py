@@ -1,5 +1,6 @@
 import gamelib
 import numpy as np
+import random
 
 
 class Region:
@@ -358,6 +359,12 @@ class Region:
                 else:
                     cost += unit.cost[0]
         return cost
+
+    def random_turret_placement(self, state: gamelib.GameState):
+        loc = random.choice(list(self.coordinates))
+        while self.grid_type[loc] == -1 or self.grid_unit[loc] is not None:
+            loc = random.choice(list(self.coordinates))
+        return loc
 
     def calculate_overall_health(self, unit_enum_map: dict, defensive_only=True):
         health = 0
