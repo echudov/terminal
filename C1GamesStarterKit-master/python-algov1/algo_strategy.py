@@ -54,8 +54,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         # OUR INITIAL SETUP BELOW
         self.health_diff = 0
         self.scored_on_locations = []
-        self.our_defense = Defense(0)
-        self.their_defense = Defense(1)
         self.enemy_units = {}  # Same as above, fo
         # r opponent
         self.units = {}  # Dict mapping unit type to unit objects
@@ -78,6 +76,19 @@ class AlgoStrategy(gamelib.AlgoCore):
         INTERCEPTOR = config["unitInformation"][5]["shorthand"]
         MP = 1
         SP = 0
+
+        # Maps name as str to its actual enum - Used anywhere involving Units
+        self.UNIT_ENUM_MAP = {
+            "WALL": WALL,
+            "FACTORY": FACTORY,
+            "TURRET": TURRET,
+            "SCOUT": SCOUT,
+            "DEMOLISHER": DEMOLISHER,
+            "INTERCEPTOR": INTERCEPTOR,
+        }
+
+        self.our_defense = Defense(self.UNIT_ENUM_MAP, 0)
+        self.their_defense = Defense(self.UNIT_ENUM_MAP, 1)
 
     def on_turn(self, turn_state):
         """
@@ -140,7 +151,9 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # For now just build or upgrade 1
         num = 0
-        (mp_diff, sp_diff) = compute_factory_impact_differential(game_state, self.UNIT_ENUM_MAP)
+        (mp_diff, sp_diff) = compute_factory_impact_differential(
+            game_state, self.UNIT_ENUM_MAP
+        )
         if mp_diff < 1 or sp_diff < 3:
             # We aren't ahead by at least 1 upgraded factory!
             our_factories = self.units[FACTORY]
