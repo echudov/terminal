@@ -24,7 +24,7 @@ class Region:
         @param damage_regions: Numpy array representing the damage units take at a specific coordinate in the region
         """
         self.vertices = vertices
-        self.coordinates = []
+        self.coordinates = set()
         self.player_id = player_id
         self.incoming_edges = incoming_edges
         self.outgoing_edges = outgoing_edges
@@ -58,22 +58,26 @@ class Region:
         # boolean to determine if we need to recalculate our paths from edge to edge based on new buildings being built
         self.recalculate_paths = True
         self.path_dict = {}
+        self.all_boundaries = set()
+        for i in range(len(vertices)):
+            for coord in self.edge_coordinates([vertices[i], vertices[(i + 1) % len(vertices)]]):
+                print(coord)
+                self.all_boundaries.add(coord)
 
         for y in range(self.ybounds[0], self.ybounds[1] + 1):
-            hlist = []
             for x in range(self.xbounds[0], self.xbounds[1] + 1):
+                if (x, y) in self.all_boundaries:
+                    continue
                 if self.point_inside_polygon(x, y, vertices):
-                    hlist.append((x, y))
+                    self.coordinates.add((x, y))
                     self[x, y][0] = 1
-            self.coordinates.append(hlist)
+
 
         self.tile_count = sum(len(hcoords) for hcoords in self.coordinates)
         # assigns edge coordinates to zero
-        print(self.edge_coordinates(edge) for edge in self.edges)
-        self.all_boundaries = set()
-        for edge in self.edges:
-            for coord in self.edge_coordinates(edge):
-                self.all_boundaries.add(coord)
+
+
+        self.coordinates = self.coordinates.union(self.all_boundaries)
         for coord in self.all_boundaries:
             self[coord][0] = 0
 
@@ -84,7 +88,7 @@ class Region:
         self.calculate_local_damage_regions(map)
         # to access you must shift the coordinate with zero_coordinates
 
-    def __getitem__(self, key: list or tuple) -> (int, gamelib.unit):
+    def __getitem__(self, key: list or tuple) -> (int, gamelib.GameUnit):
         """
         Overloads [] operator to get tuple from self.grid
         @param key: tuple representing (x, y) coordinate on the regular map
@@ -92,7 +96,7 @@ class Region:
         """
         return [self.grid_type[self.zero_coordinates(key)], self.grid_unit[self.zero_coordinates(key)]]
 
-    def __setitem__(self, key: list or tuple, value: (int, gamelib.unit)) -> None:
+    def __setitem__(self, key: list or tuple, value: (int, gamelib.GameUnit)) -> None:
         """
         Continues overloading [] operator to set the value at the tuple
         @param key: tuple representing (x, y) coordinate on the regular map

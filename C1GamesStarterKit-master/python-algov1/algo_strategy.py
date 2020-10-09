@@ -56,7 +56,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.scored_on_locations = []
         self.our_defense = Defense(0)
         self.their_defense = Defense(1)
-        self.enemy_units = {}  # Same as above, for opponent
+        self.enemy_units = {}  # Same as above, fo
+        # r opponent
         self.units = {}  # Dict mapping unit type to unit objects
         seed = random.randrange(maxsize)
         random.seed(seed)
