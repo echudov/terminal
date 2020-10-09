@@ -76,6 +76,9 @@ def get_structure_objects(
     # Iterate over board and add to list if our unit
     for x in range(board_map.ARENA_SIZE):
         for y in range(board_map.ARENA_SIZE):
+            if not board_map.in_arena_bounds([x, y]):
+                continue
+
             units = board_map[x, y]
             if not units:
                 continue
