@@ -78,17 +78,11 @@ class Region:
             self[coord][0] = 0
 
         # calculates the damage regions
-        if damage_regions is None:
-            self.damage_regions = np.full(
-                shape=(self.xwidth, self.ywidth), fill_value=0
-            )
-            self.calculate_local_damage_regions(map)
-            # to access you must shift the coordinate with zero_coordinates
-        else:
-            self.damage_regions = damage_regions[
-                self.xbounds[0] : (self.xbounds[1] + 1),
-                self.ybounds[0] : (self.ybounds[1] + 1),
-            ]
+        self.damage_regions = np.full(
+            shape=(self.xwidth, self.ywidth), fill_value=0
+        )
+        self.calculate_local_damage_regions(map)
+        # to access you must shift the coordinate with zero_coordinates
 
     def __getitem__(self, key: list or tuple) -> (int, gamelib.unit):
         """
@@ -244,8 +238,9 @@ class Region:
             left = (s[0] - 1, s[1])
             adjacents = [above, below, right, left]
             for adj in adjacents:
-                if self[adj][0] >= 0 and not visited[self.zero_coordinates(adj)]:
-                    visited[self.zero_coordinates(adj)] = True
+                if self.xbounds[0] <= adj[0] <= self.xbounds[1] and self.ybounds[0] <= adj[1] <= self.ybounds[1]:
+                    if self[adj][0] >= 0 and not visited[self.zero_coordinates(adj)]:
+                        visited[self.zero_coordinates(adj)] = True
                     if self[adj][1] is None:
                         continue
                     if self[adj][0] == 0:
@@ -271,7 +266,7 @@ class Region:
                     visited = np.full((self.xwidth, self.ywidth), False)
                     self.bfs(entrance, visited, self.path_dict)
 
-    def simulate_average_damage(self, unit: gamelib.unit):
+    def simulate_average_damage(self, unit: str):
         """
         Simulates the average damage units would take if they entered this region and
         left it at all possible entrances and exits.
@@ -283,13 +278,20 @@ class Region:
         # calculate paths to each edge
         self.calculate_paths()
         # iterate through all edges
+        if unit == "DEMOLISHER":
+            speed = 2
+        elif unit == "SCOUT":
+            speed = 1
+        elif unit == "INTERCEPTOR":
+            speed = 4
         for incoming_edge in self.incoming_edges:
             for entrance in self.edge_coordinates(incoming_edge):
                 for path in self.path_dict[entrance].values():
                     if path:
                         total_paths += 1
-                        damage_to_units += self.damage_on_path(unit.speed, path)
-
+                        damage_to_units += self.damage_on_path(speed, path)
+        if total_paths == 0:
+            return 0
         return damage_to_units / total_paths
 
     def damage_on_path(self, unit_speed: float, path: list) -> float:
@@ -351,7 +353,7 @@ class Region:
         states["OVERALL HEALTH ALL"] = self.calculate_overall_health(defensive_only=False)
         states["OVERALL HEALTH DEF"] = self.calculate_overall_health(defensive_only=True)
         states["UNDEFENDED TILES"] = self.undefended_tiles()
-        states["SIMULATED DAMAGE"] = {str(unit.unit_type) : self.simulate_average_damage(unit) for unit in units}
+        states["SIMULATED DAMAGE"] = {unit : self.simulate_average_damage(unit) for unit in units}
         return states
 
     def point_inside_polygon(self, x, y, poly):

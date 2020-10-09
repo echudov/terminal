@@ -73,7 +73,7 @@ def get_structure_objects(
     for x in range(board_map.ARENA_SIZE):
         for y in range(board_map.ARENA_SIZE):
             units = board_map[x, y]
-            if len(units) == 0:
+            if not units:
                 continue
 
             # Only can have 1 structure on a tile
@@ -87,9 +87,9 @@ def get_structure_objects(
             if desired_structure_type is None:
                 # Add all types to list
                 if (
-                    unit.unit_type == game_state.TURRET
-                    or unit.unit_type == game_state.WALL
-                    or unit.unit_type == game_state.FACTORY
+                    unit.unit_type == "TURRET"
+                    or unit.unit_type == "WALL"
+                    or unit.unit_type == "FACTORY"
                 ):
                     our_structures.append(unit)
             else:
@@ -111,15 +111,15 @@ def get_structure_dict(game_state: GameState, player: int) -> dict:
         structures_map (dict): Maps structure type as str to their list
     """
 
-    factories = get_structure_objects(game_state, game_state.FACTORY, player=player)
-    turrets = get_structure_objects(game_state, game_state.TURRET, player=player)
-    walls = get_structure_objects(game_state, game_state.WALL, player=player)
+    factories = get_structure_objects(game_state, "FACTORY", player=player)
+    turrets = get_structure_objects(game_state, "TURRET", player=player)
+    walls = get_structure_objects(game_state, "WALL", player=player)
 
     # Construct and return dict
     unit_mappings = {
-        game_state.FACTORY: factories,
-        game_state.TURRET: turrets,
-        game_state.WALL: walls,
+        "FACTORY": factories,
+        "TURRET": turrets,
+        "WALL": walls,
     }
 
     return unit_mappings
@@ -140,7 +140,7 @@ def compute_factory_impact_differential(game_state: GameState) -> (int, int):
     mp_diff = 0
     sp_diff = 0
 
-    factories = get_structure_objects(game_state, game_state.FACTORY)
+    factories = get_structure_objects(game_state, "FACTORY")
     for factory in factories:
         if factory.player_index == 0:
             # Ours

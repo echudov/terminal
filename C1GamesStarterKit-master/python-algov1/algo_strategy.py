@@ -130,18 +130,18 @@ class AlgoStrategy(gamelib.AlgoCore):
         Returns:
             num_improved (int): The number of factories built/upgraded
         """
-
+        num = 0
         # For now just build or upgrade 1
         (mp_diff, sp_diff) = compute_factory_impact_differential(game_state)
         if mp_diff < 0 or sp_diff < 0:
             # We are behind! Figure out why
-            our_factories = self.units[game_state.FACTORY]
-            opponent_factories = self.enemy_units[game_state.FACTORY]
+            our_factories = self.units["FACTORY"]
+            opponent_factories = self.enemy_units["FACTORY"]
 
             if len(opponent_factories) > len(our_factories):
                 # They simply have more - Catch up!
                 loc = factory_location_helper(game_state)
-                num = game_state.attempt_spawn(game_state.FACTORY, loc)
+                num = game_state.attempt_spawn(FACTORY, loc)
             else:
                 # Must be because they are upgrading faster - Catch up!
                 for factory in our_factories:
@@ -244,15 +244,15 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
 
         # 2 Walls on top edges
-        game_state.attempt_spawn(game_state.WALL, [[0, 13], [27, 13]])
+        game_state.attempt_spawn(WALL, [[0, 13], [27, 13]])
 
         # 4 Turrets
         game_state.attempt_spawn(
-            game_state.TURRET, [[3, 12], [7, 9], [24, 12], [20, 9], [11, 12]]
+            TURRET, [[3, 12], [7, 9], [24, 12], [20, 9], [11, 12]]
         )
 
         # 1 Factory and upgrade it
-        game_state.attempt_spawn(game_state.FACTORY, [13, 1])
+        game_state.attempt_spawn(FACTORY, [13, 1])
         game_state.attempt_upgrade([13, 1])
 
         # 5 Interceptors on defense
@@ -267,7 +267,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
 
         # Place final turret
-        game_state.attempt_spawn(game_state.TURRET, [16, 12])
+        game_state.attempt_spawn(TURRET, [16, 12])
         # Save rest of SP for next round to buy Factory
 
         # 6 Interceptors on defense
@@ -282,14 +282,14 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
 
         # Build 2nd Factory
-        game_state.attempt_spawn(game_state.FACTORY, [14, 1])
+        game_state.attempt_spawn(FACTORY, [14, 1])
         # Save rest of SP
 
         # Build wall in front of every turret
-        our_turrets = self.units[game_state.TURRET]
+        our_turrets = self.units["TURRET"]
         for turret in our_turrets:
             wall_loc = (turret.location.x, turret.location.y + 1)
-            game_state.attempt_spawn(game_state.WALL, wall_loc)
+            game_state.attempt_spawn(WALL, wall_loc)
 
         # 6 Interceptors on defense
         game_state.attempt_spawn(INTERCEPTOR, [10, 3], num=3)

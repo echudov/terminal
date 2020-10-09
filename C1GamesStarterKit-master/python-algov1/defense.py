@@ -189,17 +189,24 @@ class Defense:
         @param game_state: GameState to update with
         """
         # for simulating unit traversals in region
-        units = [gamelib.GameUnit(name, game_state.game_map.config) for name in ["DEMOLISHER", "SCOUT", "INTERCEPTOR"]]
+        units = ["DEMOLISHER", "SCOUT", "INTERCEPTOR"]
         # resets units
         self.units = {"TURRET": set(), "FACTORY": set(), "WALL": set()}
         for i, region in self.regions.items():
             region.update_structures(game_state.game_map)
             # iterate through the units to add to the overall game state
             # we use a set because there is overlap of regions, we don't want to double count units
-            for key in self.units.keys():
-                self.units[key].add(region.units[key])
             # find the states of region i
             self.states[i] = region.calculate_region_states(units)
+        for x in range(game_state.ARENA_SIZE):
+            for y in range(game_state.HALF_ARENA):
+                unit = game_state.game_map[x, y]
+                if not unit:
+                    continue
+                unit = unit[0]
+                if unit.unit_type == "WALL" or unit.unit_type == "TURRET" or unit.unit_type == "FACTORY":
+                    self.units[unit.unit_type] = unit
+
 
     def get_defense_undefended_tiles(self):
         """
