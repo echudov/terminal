@@ -57,7 +57,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.enemy_units = {}  # Same as above, fo
         # r opponent
         self.units = {}  # Dict mapping unit type to unit objects
-        self.regions_attacked = {i : [] for i in range(6)}
+        self.regions_attacked = {i: [] for i in range(6)}
         seed = random.randrange(maxsize)
         random.seed(seed)
         gamelib.debug_write("Random seed: {}".format(seed))
@@ -383,9 +383,13 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         attacked_region = max(self.regions_attacked, key=self.regions_attacked.get)
 
-        placement = self.our_defense.regions[attacked_region].random_turret_placement(game_state)
+        placement = self.our_defense.regions[attacked_region].random_turret_placement(
+            game_state
+        )
 
-        DefensiveTurretWallStrat().build_turret_wall_pair(game_state, self.UNIT_ENUM_MAP, placement, game_state.get_resource[0])
+        DefensiveTurretWallStrat().build_turret_wall_pair(
+            game_state, self.UNIT_ENUM_MAP, placement, game_state.get_resource(0)
+        )
 
         for location in self.scored_on_locations:
             build_location = [location[0], location[1]]
