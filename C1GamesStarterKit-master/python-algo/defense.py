@@ -4,23 +4,26 @@ from region import Region
 
 
 class Defense:
-    def __init__(self, player_id: int, game_state: gamelib.GameState):
+    def __init__(self, player_id: int):
         """
         Initializes defense with multiple predetermined regions.
         @param player_id: Number representing which player this defense is for 0 - us, 1 - opponent
         @param game_state: passes current game_state as GameState object
         """
         self.regions = {}
+        self.region_count = 6
         self.player_id = player_id
         self.damage_regions = np.zeros(
-            shape=(game_state.map.ARENA_SIZE, game_state.map.HALF_ARENA)
+            shape=(28, 14)
         )
         if player_id == 0:
             self.create_our_regions()
         else:
             self.create_enemy_regions()
-        self.coordinate_regions = np.full(shape=(game_state.map.ARENA_SIZE, game_state.map.HALF_ARENA), fill_value=[])
-
+        self.coordinate_regions = np.full(shape=(28, 14), fill_value=[])
+        self.history = []
+        self.units = {"TURRET": set(), "FACTORY": set(), "WALL": set()}
+        self.states = {}
 
     def create_our_regions(self):
         self.regions[0] = Region(
@@ -146,25 +149,79 @@ class Defense:
             damage_regions=self.damage_regions,
         )
 
-    def on_new_round(self, game_state):
-        self.update_regions(game_state)
-
+    def on_new_round(self, game_state: gamelib.GameState):
+        """
+        Updates relevant values
+        @param game_state: GameState value to update with
+        """
+        self.update_defense(game_state)
 
     def initialize_coordinate_regions(self):
+        """
+        Initializes coordinate_regions to contain information about what region they are contained in
+        """
         for i in range(len(self.regions)):
             for coordinate in sum(self.regions[i].coordinates):
                 self.coordinate_regions[self.offset_coord(self.offset_coord(coordinate))].append(i)
 
-    def get_region(self, coord):
+    def get_region(self, coord: list or tuple):
+        """
+        Gets the region that the coordinate is contained in
+        @param coord: (x, y) coordinate to query
+        @return: list of regions containing coordinate
+        """
         return self.coordinate_regions[self.offset_coord(coord)]
 
-    def offset_coord(self, coord):
+    def offset_coord(self, coord: list or tuple):
+        """
+        Offsets coordinate depending on if the player is us or the enemy
+        @param coord: (x, y) coordinate
+        @return: offset coordinate
+        """
         if self.player_id == 1:
             return coord[0], coord[1] - 14
         else:
             return coord
 
-    def update_regions(self, game_state):
-        for region in self.regions.values():
+    def update_defense(self, game_state: gamelib.GameState):
+        """
+        Updates defense values
+        @param game_state: GameState to update with
+        """
+        # for simulating unit traversals in region
+        units = [gamelib.GameUnit(name, game_state.map.config) for name in ["DEMOLISHER", "SCOUT", "INTERCEPTOR"]]
+        # resets units
+        self.units = {"TURRET": set(), "FACTORY": set(), "WALL": set()}
+        for i, region in self.regions.items():
             region.update_structures(game_state.map)
+            # iterate through the units to add to the overall game state
+            # we use a set because there is overlap of regions, we don't want to double count units
+            for key in self.units.keys():
+                self.units[key].add(region.units[key])
+            # find the states of region i
+            self.states[i] = region.calculate_region_states(units)
 
+    def get_defense_undefended_tiles(self):
+        """
+        Updates defense tiles
+        @return: list of undefended tiles
+        """
+        return {i : self.states[i]["UNDEFENDED TILES"] for i in range(self.region_count)}
+
+    def calculate_total_cost(self, defensive_only=True, health_prorated=True):
+        """
+        Calculates the total cost of all units
+        @param defensive_only: Whether to only look at defensive units
+        @param health_prorated: Whether to prorate cost by remaining health
+        @return: total cost
+        """
+        cost = 0
+        for units in self.units.values():
+            for unit in units:
+                if defensive_only and unit.unit_type == "FACTORY":
+                    continue
+                if health_prorated:
+                    cost += (unit.health / unit.max_health) * unit.cost[0]  # cost in structure points
+                else:
+                    cost += unit.cost[0]
+        return cost

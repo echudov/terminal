@@ -258,35 +258,34 @@ class Region:
         Does BFS on each individual edge vertex
         **CAN BE OPTIMIZED FURTHER IF NEED BE**
         """
-        self.path_dict = {
-            start: {end: [] for end in self.all_boundaries}
-            for start in self.all_boundaries
-        }
         if self.recalculate_paths:
+            self.path_dict = {
+                start: {end: [] for end in self.all_boundaries}
+                for start in self.all_boundaries
+            }
             for incoming_edge in self.incoming_edges:
                 for entrance in self.edge_coordinates(incoming_edge):
                     visited = np.full((self.xwidth, self.ywidth), False)
                     self.bfs(entrance, visited, self.path_dict)
 
-    def simulate_average_damage(self, unit_type: gamelib.unit):
+    def simulate_average_damage(self, unit: gamelib.unit):
         """
         Simulates the average damage units would take if they entered this region and
         left it at all possible entrances and exits.
-        @param unit_type: Gamelib Unit.  Must be mobile
+        @param unit: Gamelib Unit.  Must be mobile
         @return: Average damage taken across all possible paths
         """
         damage_to_units = 0
         total_paths = 0
         # calculate paths to each edge
-        if self.recalculate_paths:
-            self.calculate_paths()
+        self.calculate_paths()
         # iterate through all edges
         for incoming_edge in self.incoming_edges:
             for entrance in self.edge_coordinates(incoming_edge):
                 for path in self.path_dict[entrance].values():
                     if path:
                         total_paths += 1
-                        damage_to_units += self.damage_on_path(unit_type.speed)
+                        damage_to_units += self.damage_on_path(unit.speed)
 
         return damage_to_units / total_paths
 
@@ -301,34 +300,52 @@ class Region:
             damage += self.damage_regions[self.zero_coordinates(coord)] * 1 / unit_speed
 
     def average_tile_damage(self):
+        """
+        Calculates the average amount of damage a unit might take on tile
+        @return:
+        """
         total_damage = 0
-        tiles = 0
         for hcoords in self.coordinates:
             for coord in hcoords:
-                tiles += 1
                 total_damage += self.damage_regions[self.zero_coordinates(coord)]
-        return total_damage / tiles
+        return total_damage / self.tile_count
 
-    def calculate_region_cost(self, health_prorated=True):
+    def calculate_region_cost(self, health_prorated=True, defensive_only=False):
         cost = 0
         for units in self.units.values():
             for unit in units:
+                if defensive_only and unit.unit_type == "FACTORY":
+                    continue
                 if health_prorated:
                     cost += ( unit.health / unit.max_health ) * unit.cost[0] # cost in structure points
                 else:
                     cost += unit.cost[0]
         return cost
 
+    def calculate_overall_health(self, defensive_only=True):
+        health = 0
+        for units in self.units.values():
+            for unit in units:
+                if defensive_only and unit.unit_type == "FACTORY":
+                    continue
+                health += unit.health
+        return health
+
     def undefended_tiles(self):
-        undefended = 0
+        undefended = []
         for hcoords in self.coordinates:
             for coord in hcoords:
                 if self.damage_regions[self.zero_coordinates(coord)] == 0:
-                    undefended += 1
-
+                    undefended.append(coord)
         return undefended
 
-
-
-    def update_history(self):
-        return None
+    def calculate_region_states(self, units):
+        states = {}
+        states["AVG TILE DMG"] = self.average_tile_damage()
+        states["REGION COST ALL"] = self.calculate_region_cost(defensive_only=False)
+        states["REGION COST DEF"] = self.calculate_region_cost(defensive_only=True)
+        states["OVERALL HEALTH ALL"] = self.calculate_overall_health(defensive_only=False)
+        states["OVERALL HEALTH DEF"] = self.calculate_overall_health(defensive_only=True)
+        states["UNDEFENDED TILES"] = self.undefended_tiles()
+        states["SIMULATED DAMAGE"] = {str(unit.unit_type) : self.simulate_average_damage(unit) for unit in units}
+        return states

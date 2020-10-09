@@ -22,6 +22,7 @@ from defensive_building_functions import (
 from building_function_helper import factory_location_helper
 
 from defense import Defense
+from region import Region
 
 from meta_info_util import (
     are_losing,
@@ -50,6 +51,13 @@ Advanced strategy tips:
 class AlgoStrategy(gamelib.AlgoCore):
     def __init__(self):
         super().__init__()
+        # OUR INITIAL SETUP BELOW
+        self.health_diff = 0
+        self.scored_on_locations = []
+        self.our_defense = Defense(0)
+        self.their_defense = Defense(1)
+        self.enemy_units = {}  # Same as above, for opponent
+        self.units = {}  # Dict mapping unit type to unit objects
         seed = random.randrange(maxsize)
         random.seed(seed)
         gamelib.debug_write("Random seed: {}".format(seed))
@@ -70,11 +78,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         MP = 1
         SP = 0
 
-        # OUR INITIAL SETUP BELOW
-        self.health_diff = 0
-        self.units = {}  # Dict mapping unit type to unit objects
-        self.enemy_units = {}  # Same as above, for opponent
-        self.scored_on_locations = []
 
     def on_turn(self, turn_state):
         """
@@ -90,6 +93,10 @@ class AlgoStrategy(gamelib.AlgoCore):
                 game_state.turn_number
             )
         )
+
+        # Updating internal values of Defenses
+        self.our_defense.update_defense(game_state)
+        self.their_defense.update_defense(game_state)
         # Comment or remove this line to enable warnings.
         # game_state.suppress_warnings(True)
 
