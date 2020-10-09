@@ -484,10 +484,11 @@ class AlgoStrategy(gamelib.AlgoCore):
         self_destructs = events["selfDestruct"]
         p2units = state["p2Units"]
         for unit_num in range(3, 6):
-            unit = p2units[unit_num]
-            if unit[1] < 14:
-                region = self.our_defense.get_region([unit[0], unit[1]])
-                self.regions_attacked[region] += 1
+            unit_list = p2units[unit_num]
+            for unit in unit_list:
+                if unit[1] < 14:
+                    region = self.our_defense.get_region([unit[0], unit[1]])
+                    self.regions_attacked[region] += 1
 
         for breach in breaches:
             location = breach[0]
