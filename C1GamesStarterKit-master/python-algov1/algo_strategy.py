@@ -383,7 +383,7 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         attacked_region = max(self.regions_attacked, key=self.regions_attacked.get)
 
-        placement = self.regions[attacked_region].random_turret_placement(game_state)
+        placement = self.our_defense.get_region(attacked_region).random_turret_placement(game_state)
 
         DefensiveTurretWallStrat().build_turret_wall_pair(game_state, self.UNIT_ENUM_MAP, placement, game_state.get_resource[0])
 
