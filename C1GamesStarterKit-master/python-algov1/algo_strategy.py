@@ -149,7 +149,7 @@ class AlgoStrategy(gamelib.AlgoCore):
             return
 
         # For now just build or upgrade 1
-        (mp_diff, sp_diff) = compute_factory_impact_differential(game_state)
+        (mp_diff, sp_diff) = compute_factory_impact_differential(game_state, self.UNIT_ENUM_MAP)
         if mp_diff < 1 or sp_diff < 3:
             # We aren't ahead by at least 1 upgraded factory!
             our_factories = self.units[FACTORY]
