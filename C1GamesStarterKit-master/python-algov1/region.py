@@ -34,11 +34,7 @@ class Region:
         self.edges = set(incoming_edges + outgoing_edges + breach_edges)
 
         # dictionary containing unit types in region
-        self.units = {
-            unit_enum_map["TURRET"]: [],
-            unit_enum_map["FACTORY"]: [],
-            unit_enum_map["WALL"]: [],
-        }
+
 
         # region bounds
         self.xbounds = min(v[0] for v in self.vertices), max(
@@ -69,16 +65,16 @@ class Region:
         self.all_boundaries = set()
         for i in range(len(vertices)):
             for coord in self.edge_coordinates([vertices[i], vertices[(i + 1) % len(vertices)]]):
-                print(coord)
                 self.all_boundaries.add(coord)
 
         for y in range(self.ybounds[0], self.ybounds[1] + 1):
             for x in range(self.xbounds[0], self.xbounds[1] + 1):
                 if (x, y) in self.all_boundaries:
+                    self.grid_type[self.zero_coordinates((x, y))] = 0
                     continue
                 if self.point_inside_polygon(x, y, vertices):
                     self.coordinates.add((x, y))
-                    self[x, y][0] = 1
+                    self.grid_type[self.zero_coordinates((x, y))] = 1
 
 
         self.tile_count = sum(len(hcoords) for hcoords in self.coordinates)
@@ -91,7 +87,14 @@ class Region:
 
         # calculates the damage regions
         self.damage_regions = np.full(shape=(self.xwidth, self.ywidth), fill_value=0)
+        '''
+        self.units = {
+            unit_enum_map["TURRET"]: [],
+            unit_enum_map["FACTORY"]: [],
+            unit_enum_map["WALL"]: [],
+        }
         self.calculate_local_damage_regions(unit_enum_map, map)
+        '''
         # to access you must shift the coordinate with zero_coordinates
 
     def __getitem__(self, key: list or tuple) -> (int, gamelib.GameUnit):
@@ -166,10 +169,13 @@ class Region:
             return [
                 (start[0] + i, start[1] + i) for i in range(finish[1] - start[1] + 1)
             ]
+        # line is downward sloping
         else:
             return [
-                (start[0] - i, start[1] - i) for i in range(start[1] - finish[1] + 1)
+                (start[0] + i, start[1] - i) for i in range(start[1] - finish[1] + 1)
             ]
+
+
 
     def update_structures(self, unit_enum_map: dict, map: gamelib.GameMap) -> None:
         """
@@ -180,6 +186,8 @@ class Region:
         # iterate through each valid tile inside the triangle to see what structure is in it
         for hcoords in self.coordinates:
             for coord in hcoords:
+                if self.grid_type[self.zero_coordinates(coord)] == -1:
+                    continue
                 unit = map[coord[0], coord[1]]
                 if not unit:
                     self[coord[0], coord[1]][1] = None
@@ -187,13 +195,13 @@ class Region:
                 unit = unit[0]
                 if unit.unit_type == unit_enum_map["TURRET"]:
                     self.units[unit.unit_type].append(unit)
-                    self[coord[0], coord[1]][1] = unit
+                    self.grid_unit[self.zero_coordinates(coord)] = unit
                 elif unit.unit_type == unit_enum_map["FACTORY"]:
                     self.units[unit.unit_type].append(unit)
-                    self[coord[0], coord[1]][1] = unit
+                    self.grid_unit[self.zero_coordinates(coord)] = unit
                 elif unit.unit_type == unit_enum_map["WALL"]:
                     self.units[unit.unit_type].append(unit)
-                    self[coord[0], coord[1]][1] = unit
+                    self.grid_unit[self.zero_coordinates(coord)] = unit
         self.recalculate_paths = True
 
     def update_damage_regions(self, damage_regions: np.array(float)) -> None:
@@ -298,11 +306,11 @@ class Region:
         # calculate paths to each edge
         self.calculate_paths()
         # iterate through all edges
-        if unit == unit_enum_map["DEMOLISHER"]:
+        if unit == "DEMOLISHER":
             speed = 2
-        elif unit == unit_enum_map["SCOUT"]:
+        elif unit == "SCOUT":
             speed = 1
-        elif unit == unit_enum_map["INTERCEPTOR"]:
+        elif unit == "INTERCEPTOR":
             speed = 4
         for incoming_edge in self.incoming_edges:
             for entrance in self.edge_coordinates(incoming_edge):
