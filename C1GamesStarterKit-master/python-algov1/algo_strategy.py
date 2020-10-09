@@ -336,7 +336,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Build wall in front of every turret
         our_turrets = self.units[TURRET]
         for turret in our_turrets:
-            wall_loc = (turret.location.x, turret.location.y + 1)
+            wall_loc = (turret.x, turret.y + 1)
             game_state.attempt_spawn(WALL, wall_loc)
 
         # 6 Interceptors on defense
