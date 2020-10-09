@@ -78,7 +78,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         MP = 1
         SP = 0
 
-
     def on_turn(self, turn_state):
         """
         This function is called every turn with the game state wrapper as
@@ -93,10 +92,6 @@ class AlgoStrategy(gamelib.AlgoCore):
                 game_state.turn_number
             )
         )
-
-        # Updating internal values of Defenses
-        self.our_defense.update_defense(game_state)
-        self.their_defense.update_defense(game_state)
         # Comment or remove this line to enable warnings.
         # game_state.suppress_warnings(True)
 
@@ -104,6 +99,10 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # Refresh meta-info
         self.health_diff = health_differential(game_state)
+
+        # Updating internal values of Defenses
+        self.our_defense.update_defense(game_state)
+        self.their_defense.update_defense(game_state)
 
         # Refresh units list
         self.units = get_structure_dict(game_state, player=0)
@@ -130,13 +129,13 @@ class AlgoStrategy(gamelib.AlgoCore):
         Returns:
             num_improved (int): The number of factories built/upgraded
         """
-        num = 0
+
         # For now just build or upgrade 1
         (mp_diff, sp_diff) = compute_factory_impact_differential(game_state)
         if mp_diff < 0 or sp_diff < 0:
             # We are behind! Figure out why
-            our_factories = self.units["FACTORY"]
-            opponent_factories = self.enemy_units["FACTORY"]
+            our_factories = self.units[FACTORY]
+            opponent_factories = self.enemy_units[FACTORY]
 
             if len(opponent_factories) > len(our_factories):
                 # They simply have more - Catch up!
@@ -161,15 +160,15 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # TODO
 
-        # For the first few turns, just get set up
-        if game_state.turn_number <= 3:
+        # For the first 3 turns, just get set up
+        if game_state.turn_number < 3:
             self.starting_strategy(game_state)
             return
 
         # Choose a strategy (aggressive, medium, passive)
-        aggressive = False
-        medium = False
-        passive = False
+        aggressive = (game_state.turn_number % 2) == 0
+        medium = (game_state.turn_number % 2) == 0
+        passive = are_losing(game_state)
 
         # Execute it
         if aggressive:
@@ -189,7 +188,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         locs = [[20, 6], [6, 7]]
 
         OffensiveInterceptorSpam().build_interceptor_spam_multiple_locs(
-            game_state, 3, locs
+            game_state, game_state.number_affordable(INTERCEPTOR), locs
         )
 
     def medium_strategy(self, game_state: GameState):
@@ -202,9 +201,17 @@ class AlgoStrategy(gamelib.AlgoCore):
         DefensiveTurretWallStrat().build_turret_wall_pair(
             game_state,
             (13, 12),
-            game_state.get_resource(game_state.SP),
+            game_state.get_resource(SP),
             above=True,
             right=True,
+        )
+
+        OffensiveDemolisherLine().build_demolisher_line(game_state, 1, (5, 5))
+
+        locs = [[20, 6], [6, 7]]
+
+        OffensiveInterceptorSpam().build_interceptor_spam_multiple_locs(
+            game_state, game_state.number_affordable(INTERCEPTOR), locs
         )
 
     def passive_strategy(self, game_state: GameState):
@@ -267,7 +274,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
 
         # Place final turret
-        game_state.attempt_spawn(TURRET, [16, 12])
+        game_state.attempt_spawn(game_state.TURRET, [16, 12])
         # Save rest of SP for next round to buy Factory
 
         # 6 Interceptors on defense
@@ -286,10 +293,10 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Save rest of SP
 
         # Build wall in front of every turret
-        our_turrets = self.units["TURRET"]
+        our_turrets = self.units[game_state.TURRET]
         for turret in our_turrets:
             wall_loc = (turret.location.x, turret.location.y + 1)
-            game_state.attempt_spawn(WALL, wall_loc)
+            game_state.attempt_spawn(game_state.WALL, wall_loc)
 
         # 6 Interceptors on defense
         game_state.attempt_spawn(INTERCEPTOR, [10, 3], num=3)
