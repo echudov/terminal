@@ -116,9 +116,9 @@ def get_structure_dict(game_state: GameState, unit_enum_map: dict, player: int) 
         structures_map (dict): Maps structure type as str to their list
     """
 
-    factories = get_structure_objects(game_state, unit_enum_map["FACTORY"], player=player)
-    turrets = get_structure_objects(game_state, unit_enum_map["TURRET"], player=player)
-    walls = get_structure_objects(game_state, unit_enum_map["WALL"], player=player)
+    factories = get_structure_objects(game_state, unit_enum_map, player=player)
+    turrets = get_structure_objects(game_state, unit_enum_map, player=player)
+    walls = get_structure_objects(game_state, unit_enum_map, player=player)
 
     # Construct and return dict
     unit_mappings = {
@@ -130,7 +130,9 @@ def get_structure_dict(game_state: GameState, unit_enum_map: dict, player: int) 
     return unit_mappings
 
 
-def compute_factory_impact_differential(game_state: GameState, unit_enum_map: dict) -> (int, int):
+def compute_factory_impact_differential(
+    game_state: GameState, unit_enum_map: dict
+) -> (int, int):
     """Computes the factory impact differential between us and our opponent.
     This is the MP/SP production difference per turn as of this game state.
     If diff < 0, we are producing less of that resource type.
