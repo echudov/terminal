@@ -78,7 +78,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         MP = 1
         SP = 0
 
-
     def on_turn(self, turn_state):
         """
         This function is called every turn with the game state wrapper as
@@ -93,10 +92,6 @@ class AlgoStrategy(gamelib.AlgoCore):
                 game_state.turn_number
             )
         )
-
-        # Updating internal values of Defenses
-        self.our_defense.update_defense(game_state)
-        self.their_defense.update_defense(game_state)
         # Comment or remove this line to enable warnings.
         # game_state.suppress_warnings(True)
 
@@ -104,6 +99,10 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # Refresh meta-info
         self.health_diff = health_differential(game_state)
+
+        # Updating internal values of Defenses
+        self.our_defense.update_defense(game_state)
+        self.their_defense.update_defense(game_state)
 
         # Refresh units list
         self.units = get_structure_dict(game_state, player=0)
@@ -161,14 +160,14 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # TODO
 
-        # For the first few turns, just get set up
-        if game_state.turn_number <= 3:
+        # For the first 3 turns, just get set up
+        if game_state.turn_number < 3:
             self.starting_strategy(game_state)
             return
 
         # Choose a strategy (aggressive, medium, passive)
-        aggressive = False
-        medium = False
+        aggressive = (game_state.turn_number % 2) == 0
+        medium = (game_state.turn_number % 2) == 0
         passive = False
 
         # Execute it
@@ -189,7 +188,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         locs = [[20, 6], [6, 7]]
 
         OffensiveInterceptorSpam().build_interceptor_spam_multiple_locs(
-            game_state, 3, locs
+            game_state, game_state.number_affordable(game_state.INTERCEPTOR), locs
         )
 
     def medium_strategy(self, game_state: GameState):
@@ -205,6 +204,14 @@ class AlgoStrategy(gamelib.AlgoCore):
             game_state.get_resource(game_state.SP),
             above=True,
             right=True,
+        )
+
+        OffensiveDemolisherLine().build_demolisher_line(game_state, 1, (5, 5))
+
+        locs = [[20, 6], [6, 7]]
+
+        OffensiveInterceptorSpam().build_interceptor_spam_multiple_locs(
+            game_state, game_state.number_affordable(game_state.INTERCEPTOR), locs
         )
 
     def passive_strategy(self, game_state: GameState):
