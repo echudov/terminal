@@ -54,8 +54,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         # OUR INITIAL SETUP BELOW
         self.health_diff = 0
         self.scored_on_locations = []
-        self.our_defense = Defense(0)
-        self.their_defense = Defense(1)
         self.enemy_units = {}  # Same as above, for opponent
         self.units = {}  # Dict mapping unit type to unit objects
         seed = random.randrange(maxsize)
@@ -87,6 +85,9 @@ class AlgoStrategy(gamelib.AlgoCore):
             "DEMOLISHER": DEMOLISHER,
             "INTERCEPTOR": INTERCEPTOR,
         }
+
+        self.our_defense = Defense(self.UNIT_ENUM_MAP, 0)
+        self.their_defense = Defense(self.UNIT_ENUM_MAP, 1)
 
     def on_turn(self, turn_state):
         """
