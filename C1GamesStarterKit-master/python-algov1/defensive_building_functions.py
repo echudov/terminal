@@ -32,7 +32,7 @@ class DefensiveWallStrat:
 
         if right:
             locations = [
-                [starting_location[0], starting_location[1] + i] for i in range(length)
+                [starting_location[0] + i, starting_location[1]] for i in range(length)
             ]
 
             for loc in locations:
@@ -43,7 +43,7 @@ class DefensiveWallStrat:
 
         if not right:
             locations = [
-                [starting_location[0], starting_location[1] - i] for i in range(length)
+                [starting_location[0] - i, starting_location[1]] for i in range(length)
             ]
 
             for loc in locations:
@@ -75,7 +75,7 @@ class DefensiveWallStrat:
 
         if right:
             locations = [
-                [starting_location[0], starting_location[1] + i] for i in range(length)
+                [starting_location[0] + i, starting_location[1]] for i in range(length)
             ]
 
             for loc in locations:
@@ -84,7 +84,7 @@ class DefensiveWallStrat:
 
         if not right:
             locations = [
-                [starting_location[0], starting_location[1] - i] for i in range(length)
+                [starting_location[0] - i, starting_location[1]] for i in range(length)
             ]
 
             for loc in locations:

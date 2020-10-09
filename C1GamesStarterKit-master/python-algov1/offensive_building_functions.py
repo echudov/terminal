@@ -136,14 +136,12 @@ class OffensiveDemolisherLine:
             x = dem_x + (i * dem_loc_offset)
             y = dem_y
 
-            if not game_state.can_spawn(
+            if game_state.can_spawn(
                 unit_enum_map["DEMOLISHER"], [x, y], num_dem_per_loc
             ):
-                continue
-
-            dem_num += game_state.attempt_spawn(
-                unit_enum_map["DEMOLISHER"], [x, y], num_dem_per_loc
-            )
+                dem_num += game_state.attempt_spawn(
+                    unit_enum_map["DEMOLISHER"], [x, y], num_dem_per_loc
+                )
 
         if wall_num == 0 or dem_num == 0:
             return False
