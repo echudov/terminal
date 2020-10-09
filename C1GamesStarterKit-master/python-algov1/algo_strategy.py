@@ -124,8 +124,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         (mp_diff, sp_diff) = compute_factory_impact_differential(
             game_state, self.UNIT_ENUM_MAP
         )
-        if mp_diff > 3 and sp_diff > 9:
-            # Already quite ahead... deprioritize factory building
+        if (mp_diff > 3 and sp_diff > 9) or self.health_diff < 5:
+            # Already quite ahead in terms of factories OR losing and need to focus on defense
             self.resolve_factory_impact_diff(game_state, deprioritize=True)
         else:
             self.resolve_factory_impact_diff(game_state)
@@ -149,7 +149,7 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         Args:
             game_state (GameState): The current GameState object
-            deprioritize (bool): Whether we should deprioritize building/upgrading factories
+            deprioritize (bool): Whether we should deprioritize building/upgrading factories. If True, will build/upgrade maximum 1 factory
 
         Returns:
             num_improved (int): The number of factories built/upgraded
@@ -158,8 +158,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         # At start of game, won't have any factories
         if FACTORY not in self.units:
             return
-
-        num = 0
 
         # Factories we build should be a function of how many we can afford
         possible_factories = game_state.number_affordable(FACTORY)
@@ -172,31 +170,30 @@ class AlgoStrategy(gamelib.AlgoCore):
                 if not factory.upgraded:
                     num = game_state.attempt_upgrade((factory.x, factory.y))
                     if num != 0:
-                        return num
+                        return
 
             # All factories already upgraded
             loc = factory_location_helper(game_state)
             num = game_state.attempt_spawn(FACTORY, loc)
-
-            return num
         else:
             # Otherwise, build half of the max possible
             actual_factories = math.floor(possible_factories / 2)
+            num = 0  # Don't allow to exceed actual_factories
 
             # Prioritize upgrading over building
             for factory in our_factories:
                 if not factory.upgraded:
                     if num == actual_factories:
-                        return num
+                        return
 
                     num += game_state.attempt_upgrade((factory.x, factory.y))
 
             # Upgraded all possible ones. Now build any possible remaining
             for _ in range(actual_factories - num):
                 loc = factory_location_helper(game_state)
-                num = game_state.attempt_spawn(FACTORY, loc)
+                num += game_state.attempt_spawn(FACTORY, loc)
 
-            return num
+            return
 
     def choose_and_execute_strategy(self, game_state: GameState):
         """Wrapper to choose and execute a strategy based on the game state.
