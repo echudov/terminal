@@ -107,29 +107,27 @@ class OffensiveDemolisherLine:
         """
 
         # Build a full line towards right of location (might overflow but fine)
-        loc = [0, location[1]]  # Start at the beginning artificially
         wall_num = 0
         wall_num = DefensiveWallStrat().build_h_wall_line(
-            game_state, loc, game_state.ARENA_SIZE
+            game_state, location, game_state.ARENA_SIZE, right=True
         )
 
         # Build demolishers 1 tile behind
-        dem_loc = [0, loc[1] - 1]
+        dem_x = location[0]
+        dem_y = location[1] - 1
 
-        # TODO: This should be the actual number of horizontal tiles at this loc
-        dem_loc_offset = (
-            game_state.number_affordable(game_state.DEMOLISHER) / game_state.HALF_ARENA
-        )
-        num_locs = game_state.HALF_ARENA / dem_loc_offset
+        x_places = 2 + (2 * dem_y)  # Number of x-tiles
+        dem_loc_offset = x_places / num_demolishers  # Space between each demolisher
+        num_locs = x_places / dem_loc_offset  # num of locs to place at least 1 dem at
+
         num_dem_per_loc = num_demolishers / num_locs
-
         dem_num = 0
         for i in range(num_locs):
-            x = dem_loc[0] + (i * dem_loc_offset)
-            y = dem_loc[1]
+            x = dem_x + (i * dem_loc_offset)
+            y = dem_y
 
             if not game_state.can_spawn(game_state.DEMOLISHER, [x, y], num_dem_per_loc):
-                return False
+                continue
 
             dem_num += game_state.attempt_spawn(
                 game_state.DEMOLISHER, [x, y], num_dem_per_loc
