@@ -354,10 +354,11 @@ class AlgoStrategy(gamelib.AlgoCore):
         as shown in the on_action_frame function
         """
 
+        # TODO Check this!
+
         self.update_scored_on_locations(turn_state)
         for location in self.scored_on_locations:
-            # Build turret one space above so that it doesn't block our own edge spawn locations
-            build_location = [location[0], location[1] + 1]
+            build_location = [location[0], location[1]]
             if game_state.can_spawn(TURRET, build_location):
                 game_state.attempt_spawn(TURRET, build_location)
 
