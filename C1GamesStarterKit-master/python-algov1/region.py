@@ -87,14 +87,13 @@ class Region:
 
         # calculates the damage regions
         self.damage_regions = np.full(shape=(self.xwidth, self.ywidth), fill_value=0)
-        '''
         self.units = {
             unit_enum_map["TURRET"]: [],
             unit_enum_map["FACTORY"]: [],
             unit_enum_map["WALL"]: [],
         }
         self.calculate_local_damage_regions(unit_enum_map, map)
-        '''
+
         # to access you must shift the coordinate with zero_coordinates
 
     def __getitem__(self, key: list or tuple) -> (int, gamelib.GameUnit):
