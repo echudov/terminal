@@ -112,8 +112,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.health_diff = health_differential(game_state)
 
         # Updating internal values of Defenses
-        self.our_defense.update_defense(game_state)
-        self.their_defense.update_defense(game_state)
+        self.our_defense.update_defense(self.UNIT_ENUM_MAP, game_state)
+        self.their_defense.update_defense(self.UNIT_ENUM_MAP, game_state)
 
         # Refresh units list
         self.units = get_structure_dict(game_state, self.UNIT_ENUM_MAP, player=0)
