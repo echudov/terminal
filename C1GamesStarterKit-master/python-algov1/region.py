@@ -1,5 +1,4 @@
 import gamelib
-import matplotlib.path as mplPath
 import numpy as np
 
 
@@ -39,39 +38,42 @@ class Region:
         self.xbounds = min(v[0] for v in self.vertices), max(
             v[0] for v in self.vertices
         )
-        self.xwidth = self.xbounds[1] - self.xbounds[0]
+        self.xwidth = self.xbounds[1] - self.xbounds[0] + 1
 
         self.ybounds = min(v[1] for v in self.vertices), max(
             v[1] for v in self.vertices
         )
-        self.ywidth = self.ybounds[1] - self.ybounds[0]
+        self.ywidth = self.ybounds[1] - self.ybounds[0] + 1
 
         # each value in the grid looks like (int, units)
         # the first # is the type of coordinate:
         # -1: invalid coordinate, 0: edge, 1: inside
         # the second is the stationary unit contained in the cell
         # the [] operator accesses values from this grid
-        self.grid = np.full(
-            shape=(self.xwidth, self.ywidth), fill_value=(-1, None), dtype=(int, object)
+        self.grid_type = np.full(
+            shape=(self.xwidth, self.ywidth), fill_value=-1, dtype=object
         )
+        self.grid_unit = np.full(shape=(self.xwidth, self.ywidth), fill_value=None, dtype=gamelib.GameUnit)
 
         # boolean to determine if we need to recalculate our paths from edge to edge based on new buildings being built
         self.recalculate_paths = True
         self.path_dict = {}
 
-        # checks to see if x, y coordinates are in the polygon
-        polygon_path = mplPath.Path(np.array(vertices))
         for y in range(self.ybounds[0], self.ybounds[1] + 1):
             hlist = []
             for x in range(self.xbounds[0], self.xbounds[1] + 1):
-                if polygon_path.contains_point((x, y)):
+                if self.point_inside_polygon(x, y, vertices):
                     hlist.append((x, y))
                     self[x, y][0] = 1
             self.coordinates.append(hlist)
 
         self.tile_count = sum(len(hcoords) for hcoords in self.coordinates)
         # assigns edge coordinates to zero
-        self.all_boundaries = set([self.edge_coordinates(edge) for edge in self.edges])
+        print(self.edge_coordinates(edge) for edge in self.edges)
+        self.all_boundaries = set()
+        for edge in self.edges:
+            for coord in self.edge_coordinates(edge):
+                self.all_boundaries.add(coord)
         for coord in self.all_boundaries:
             self[coord][0] = 0
 
@@ -94,7 +96,7 @@ class Region:
         @param key: tuple representing (x, y) coordinate on the regular map
         @return: Tuple representing information about the region grid at the coordinate
         """
-        return self.grid[self.zero_coordinates(key)]
+        return [self.grid_type[self.zero_coordinates(key)], self.grid_unit[self.zero_coordinates(key)]]
 
     def __setitem__(self, key: list or tuple, value: (int, gamelib.unit)) -> None:
         """
@@ -102,7 +104,8 @@ class Region:
         @param key: tuple representing (x, y) coordinate on the regular map
         @param value: Tuple representing information about the region grid at the coordinate
         """
-        self.grid[key[0] - self.xbounds[0], key[1] - self.ybounds[0]] = value
+        self.grid_type[key[0] - self.xbounds[0], key[1] - self.ybounds[0]] = value[0]
+        self.grid_unit[key[0] - self.xbounds[0], key[1] - self.ybounds[0]] = value[1]
 
     def on_edge(self, coords: tuple or list) -> bool:
         """
@@ -285,7 +288,7 @@ class Region:
                 for path in self.path_dict[entrance].values():
                     if path:
                         total_paths += 1
-                        damage_to_units += self.damage_on_path(unit.speed)
+                        damage_to_units += self.damage_on_path(unit.speed, path)
 
         return damage_to_units / total_paths
 
@@ -298,6 +301,7 @@ class Region:
         damage = 0
         for coord in path:
             damage += self.damage_regions[self.zero_coordinates(coord)] * 1 / unit_speed
+        return damage
 
     def average_tile_damage(self):
         """
@@ -349,3 +353,21 @@ class Region:
         states["UNDEFENDED TILES"] = self.undefended_tiles()
         states["SIMULATED DAMAGE"] = {str(unit.unit_type) : self.simulate_average_damage(unit) for unit in units}
         return states
+
+    def point_inside_polygon(self, x, y, poly):
+        n = len(poly)
+        inside = False
+
+        p1x, p1y = poly[0]
+        for i in range(n + 1):
+            p2x, p2y = poly[i % n]
+            if y > min(p1y, p2y):
+                if y <= max(p1y, p2y):
+                    if x <= max(p1x, p2x):
+                        if p1y != p2y:
+                            xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                        if p1x == p2x or x <= xinters:
+                            inside = not inside
+            p1x, p1y = p2x, p2y
+
+        return inside

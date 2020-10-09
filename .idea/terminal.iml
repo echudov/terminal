@@ -3,6 +3,7 @@
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/C1GamesStarterKit-master/python-algo" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/C1GamesStarterKit-master/python-algov1" isTestSource="false" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

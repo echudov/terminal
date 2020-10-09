@@ -20,7 +20,7 @@ class Defense:
             self.create_our_regions()
         else:
             self.create_enemy_regions()
-        self.coordinate_regions = np.full(shape=(28, 14), fill_value=[])
+        self.coordinate_regions = [[[] for y in range(14)] for x in range(28)]
         self.history = []
         self.units = {"TURRET": set(), "FACTORY": set(), "WALL": set()}
         self.states = {}
@@ -189,11 +189,11 @@ class Defense:
         @param game_state: GameState to update with
         """
         # for simulating unit traversals in region
-        units = [gamelib.GameUnit(name, game_state.map.config) for name in ["DEMOLISHER", "SCOUT", "INTERCEPTOR"]]
+        units = [gamelib.GameUnit(name, game_state.game_map.config) for name in ["DEMOLISHER", "SCOUT", "INTERCEPTOR"]]
         # resets units
         self.units = {"TURRET": set(), "FACTORY": set(), "WALL": set()}
         for i, region in self.regions.items():
-            region.update_structures(game_state.map)
+            region.update_structures(game_state.game_map)
             # iterate through the units to add to the overall game state
             # we use a set because there is overlap of regions, we don't want to double count units
             for key in self.units.keys():
@@ -225,3 +225,4 @@ class Defense:
                 else:
                     cost += unit.cost[0]
         return cost
+
