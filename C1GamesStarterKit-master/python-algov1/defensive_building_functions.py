@@ -34,10 +34,10 @@ class DefensiveWallStrat:
             ]
 
             for loc in locations:
-                if not game_state.can_spawn(game_state.WALL, loc):
+                if not game_state.can_spawn("WALL", loc):
                     continue
 
-                built += game_state.attempt_spawn(game_state.WALL, loc)
+                built += game_state.attempt_spawn("WALL", loc)
 
         if not right:
             locations = [
@@ -45,10 +45,10 @@ class DefensiveWallStrat:
             ]
 
             for loc in locations:
-                if not game_state.can_spawn(game_state.WALL, loc):
+                if not game_state.can_spawn("WALL", loc):
                     continue
 
-                built += game_state.attempt_spawn(game_state.WALL, loc)
+                built += game_state.attempt_spawn("WALL", loc)
 
         return built
 
@@ -130,18 +130,18 @@ class DefensiveTurretWallStrat:
         if right:
             wall_offsets.append([1, 0])
 
-        if not game_state.can_spawn(game_state.TURRET, turret_location):
+        if not game_state.can_spawn("TURRET", turret_location):
             return built
         for wo in wall_offsets:
             if not game_state.can_spawn(
-                game_state.WALL,
+                "WALL",
                 [wo[0] + turret_location[0], wo[1] + turret_location[1]],
             ):
                 return built
 
         # Can build Turret and wall(s)
 
-        built += game_state.attempt_spawn(game_state.TURRET, turret_location)
+        built += game_state.attempt_spawn("TURRET", turret_location)
 
         # Build the wall(s)
         for wo in wall_offsets:
@@ -149,7 +149,7 @@ class DefensiveTurretWallStrat:
                 wo[0] + turret_location[0],
                 wo[1] + turret_location[1],
             ]
-            built += game_state.attempt_spawn(game_state.WALL, coord)
+            built += game_state.attempt_spawn("WALL", coord)
 
         return built
 
