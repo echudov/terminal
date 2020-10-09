@@ -399,7 +399,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Now let's build out a line of stationary units. This will prevent our demolisher from running into the enemy base.
         # Instead they will stay at the perfect distance to attack the front two rows of the enemy base.
         for x in range(27, 5, -1):
-            game_state.attempt_spawn(WALL, [x, 11])
+            if game_state.can_spawn(WALL, [x, 11]):
+                game_state.attempt_spawn(WALL, [x, 11])
 
         # Now spawn demolishers next to the line
         game_state.attempt_spawn(
