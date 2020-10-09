@@ -105,7 +105,7 @@ class AlgoStrategy(gamelib.AlgoCore):
             )
         )
         # Comment or remove this line to enable warnings.
-        # game_state.suppress_warnings(True)
+        game_state.suppress_warnings(True)
 
         # OUR TURN-DECISION-MAKING HERE
 
