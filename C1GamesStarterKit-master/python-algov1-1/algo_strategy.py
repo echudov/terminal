@@ -152,14 +152,14 @@ class AlgoStrategy(gamelib.AlgoCore):
             turn_state (str): Turn state (for frame analysis)
         """
 
-        # Refresh scored on locations & enemy unit breaches
-        # scored_on_locations reset to empty before processing
-        self.on_action_frame(turn_state)
-
         # For the first 3 turns, just get set up
         if game_state.turn_number < 3:
             self.starting_strategy(game_state)
             return
+
+        # Refresh scored on locations & enemy unit breaches
+        # scored_on_locations reset to empty before processing
+        self.on_action_frame(turn_state)
 
         # TODO - Have they gotten far in our base?
         if not self.scored_on_locations:
@@ -168,7 +168,7 @@ class AlgoStrategy(gamelib.AlgoCore):
             # Keep upgrading/building factories (max 50% of SP)
             self.resolve_factory_impact_diff(game_state)
 
-            # Fortify regions
+            # Fortify regions that enemy units breached
             attacked_region = None
             max_attacks = 0
             for i in range(6):
@@ -179,6 +179,8 @@ class AlgoStrategy(gamelib.AlgoCore):
                 self.our_defense.regions[i].fortify_region_defenses(
                     game_state, self.UNIT_ENUM_MAP
                 )
+
+            # General defense fortification
             self.our_defense.fortify_defenses(game_state, self.UNIT_ENUM_MAP)
 
             # Do they have many structures near their front?
@@ -186,7 +188,7 @@ class AlgoStrategy(gamelib.AlgoCore):
                 game_state, self.UNIT_ENUM_MAP, self.their_defense.units
             )
             if concentrated_frontal_area is not None:
-                num_demolishers = math.floor(game_state.number_affordable(DEMOLISHER))
+                # Target that frontal area (row + left/right half)
 
                 y_coord = concentrated_frontal_area[0]
                 x_half = concentrated_frontal_area[1]  # if True, LEFT, else RIGHT
@@ -200,7 +202,7 @@ class AlgoStrategy(gamelib.AlgoCore):
                     # RIGHT HALF - Place demolishers on left half
                     x_coord = 13 - y_coord
 
-                # TODO - Only send in 1 location - stack there
+                num_demolishers = math.floor(game_state.number_affordable(DEMOLISHER))
                 OffensiveDemolisherLine().build_demolisher_line(
                     game_state,
                     self.UNIT_ENUM_MAP,
@@ -225,23 +227,25 @@ class AlgoStrategy(gamelib.AlgoCore):
                     [[x_left_bound, row], [x_right_bound, row]],
                 )
         else:
-            # EMERGENCY CASE
+            # EMERGENCY CASE - Fortify immediately
 
-            # Fortify scored on locations
-            for loc in set(self.scored_on_locations):
-                to_fortify = self.our_defense.get_region(loc)
-                self.our_defense.regions[to_fortify].fortify_region_defenses(
+            # Fortify regions scored on locations
+            regions = set()
+            for loc in self.scored_on_locations:
+                regions.add(self.our_defense.get_region(loc))
+            for region in regions:
+                self.our_defense.regions[region].fortify_region_defenses(
                     game_state, self.UNIT_ENUM_MAP
                 )
+
+            # Factory Impact Diff deprioritized
             self.resolve_factory_impact_diff(game_state, deprioritize=True)
-            # fortify defenses with remaining SP points
+
+            # General defense fortification
             self.our_defense.fortify_defenses(game_state, self.UNIT_ENUM_MAP)
+
             # TODO - More Intelligent Interceptor Defense
             self.defend_with_interceptors(game_state)
-
-            # TODO - Fortify those regions closest to the front
-
-            # TODO - Use defense-reinforcement algo
 
     def resolve_factory_impact_diff(
         self, game_state: GameState, deprioritize: bool = False
