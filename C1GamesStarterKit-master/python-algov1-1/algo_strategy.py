@@ -121,7 +121,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         game_state.suppress_warnings(True)
 
         # OUR TURN-DECISION-MAKING HERE
-
         # Refresh meta-info
         self.health_diff = health_differential(game_state)
 
@@ -134,8 +133,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.enemy_units = self.their_defense.units
 
         # Refresh scored on locations & enemy unit breaches
-        self.scored_on_locations = []
         self.on_action_frame(turn_state)
+        gamelib.util.debug_write(self.scored_on_locations)
 
         # Perform moves - MAIN ENTRY POINT
         self.choose_and_execute_strategy(game_state, turn_state)
@@ -246,18 +245,22 @@ class AlgoStrategy(gamelib.AlgoCore):
             # EMERGENCY CASE - Fortify immediately
 
             # Fortify regions scored on locations
-            for loc in set(self.scored_on_locations):
-                if loc[1] > 10:
-                    # If we got scored on at top-ish edges, add walls there
+            for loc, unit_type in set(self.scored_on_locations):
+                # If we got scored on at top-ish edges, add walls there
+                loc = list(loc)
+                if loc[1] > 9:
                     for i in range(4):
                         game_state.attempt_spawn(
                             self.UNIT_ENUM_MAP["WALL"],
                             locations=[[i, 13], [27 - i, 13]],
                         )
+                if unit_type == self.UNIT_ENUM_MAP["SCOUT"]:
+                    game_state.attempt_spawn(self.UNIT_ENUM_MAP["INTERCEPTOR"], locations=loc, num=5)
 
                 for potential_turret in game_state.game_map.get_locations_in_range(
-                    loc, radius=1.5
+                    loc, radius=2
                 ):
+                    gamelib.util.debug_write(potential_turret)
                     if game_state.can_spawn(
                         self.UNIT_ENUM_MAP["TURRET"], location=potential_turret
                     ):
@@ -265,7 +268,7 @@ class AlgoStrategy(gamelib.AlgoCore):
                             self.UNIT_ENUM_MAP["TURRET"], locations=potential_turret
                         )
                         game_state.attempt_upgrade(
-                            self.UNIT_ENUM_MAP["TURRET"], locations=potential_turret
+                            locations=potential_turret
                         )
                         break
 
@@ -431,7 +434,7 @@ class AlgoStrategy(gamelib.AlgoCore):
                 interceptor_loc,
             )
 
-    def on_action_frame(self, action_frame_game_state: str):
+    def on_action_frame(self, turn_string: str):
         """
         This is the action frame of the game. This function could be called
         hundreds of times per turn and could slow the algo down so avoid putting slow code here.
@@ -441,7 +444,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         This sets our regions_attacked and scored_on_locations lists
         """
 
-        state = json.loads(action_frame_game_state)
+        state = json.loads(turn_string)
         events = state["events"]
 
         # Record which regions got attacked (had enemy units inside)
@@ -461,9 +464,12 @@ class AlgoStrategy(gamelib.AlgoCore):
             location = breach[0]
             unit_owner_self = True if breach[4] == 1 else False
             # When parsing the frame data directly,
+            unit_type = breach[2]
             # 1 is integer for yourself, 2 is opponent (StarterKit code uses 0, 1 as player_index instead)
             if not unit_owner_self:
-                self.scored_on_locations.append(location)
+                # gamelib.debug_write("Got scored on at: {}".format(location))
+                self.scored_on_locations.append((tuple(location), unit_type))
+                # gamelib.debug_write("All locations: {}".format(self.scored_on_locations))
 
     #####################################################################
     ########### USEFUL BUT UNUSED FUNCTIONS THEY'VE PROVIDED ############
