@@ -377,11 +377,16 @@ class Defense:
         @param game_state: Game State to pass in
         @param criteria: Criteria to evaluate weakest region on
         """
-        """
-        # TODO - Later remove count
-        while not self.turrets_to_rebuild.empty() and game_state.get_resource(0, 0) >= 4:
+        while (
+            not self.turrets_to_rebuild.empty() and game_state.get_resource(0, 0) >= 4
+        ):
             elem = self.turrets_to_rebuild.get()
-            if game_state.attempt_spawn(unit_type=unit_enum_map["TURRET"], locations=elem["COORD"]) > 0:
+            if (
+                game_state.attempt_spawn(
+                    unit_type=unit_enum_map["TURRET"], locations=elem["COORD"]
+                )
+                > 0
+            ):
                 if elem["UPGRADE"]:
                     game_state.attempt_upgrade(locations=elem["COORD"])
 
@@ -389,24 +394,35 @@ class Defense:
 
         while not self.walls_to_rebuild.empty() and game_state.get_resource(0, 0) >= 4:
             elem = self.walls_to_rebuild.get()
-            if game_state.attempt_spawn(unit_type=unit_enum_map["WALL"], locations=elem["COORD"]) > 0:
+            if (
+                game_state.attempt_spawn(
+                    unit_type=unit_enum_map["WALL"], locations=elem["COORD"]
+                )
+                > 0
+            ):
                 if elem["UPGRADE"]:
                     game_state.attempt_upgrade(locations=elem["COORD"])
 
         self.walls_to_rebuild = queue.Queue()
 
-        if game_state.turn_number >= self.MIN_TURN_REBUILD and game_state.get_resource(0, 0) >= 4:
+        if (
+            game_state.turn_number >= self.MIN_TURN_REBUILD
+            and game_state.get_resource(0, 0) >= 4
+        ):
             for turret in self.units[unit_enum_map["TURRET"]]:
                 if turret.health < self.PERCENT_TO_REBUILD_TURRET * turret.max_health:
-                    self.turrets_to_rebuild.put({"COORD": [turret.x, turret.y], "UPGRADE": turret.upgraded})
+                    self.turrets_to_rebuild.put(
+                        {"COORD": [turret.x, turret.y], "UPGRADE": turret.upgraded}
+                    )
                     game_state.attempt_remove([turret.x, turret.y])
             for wall in self.units[unit_enum_map["WALL"]]:
                 if wall.health < self.PERCENT_TO_REBUILD_WALL * wall.max_health:
-                    self.walls_to_rebuild.put({"COORD": [wall.x, wall.y], "UPGRADE": wall.upgraded})
+                    self.walls_to_rebuild.put(
+                        {"COORD": [wall.x, wall.y], "UPGRADE": wall.upgraded}
+                    )
                     game_state.attempt_remove([wall.x, wall.y])
-        """
         count = 0
-        while game_state.get_resource(0, 0) > sp_left and count < 5:
+        while game_state.get_resource(0, 0) > sp_left and count < 15:
             if game_state.turn_number > self.MIN_TURN_TO_FORTIFY_BACK_REGIONS:
                 # Check the back regions too (fortify factories, etc.)
                 weakest_region = self.weakest_region(

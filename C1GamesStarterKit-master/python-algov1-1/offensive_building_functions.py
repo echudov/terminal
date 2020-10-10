@@ -128,7 +128,6 @@ class OffensiveDemolisherLine:
                 dem_location[0] += 1
             else:
                 dem_location[0] -= 1
-
             dem_location[1] -= 1
             path = game_state.find_path_to_edge(dem_location)
 
