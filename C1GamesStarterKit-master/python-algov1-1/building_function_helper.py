@@ -122,16 +122,16 @@ def coordinate_path_location_helper(
     for spawn_loc in possible_spawn_locs:
         path = game_state.find_path_to_edge(spawn_loc)
 
+        # Starting point was blocked by stationary unit
+        if path is None:
+            continue
+
         # If final point is not on an edge, it's a self-destruct path
         final_point = path[-1]
         if final_point not in g_map.get_edge_locations(
             g_map.TOP_LEFT
         ) or final_point not in g_map.get_edge_locations(g_map.TOP_RIGHT):
             continue  # Self-destruct path
-
-        # If starting point is blocked, skip - not useful
-        if game_state.contains_stationary_unit(path[0]):
-            continue
 
         # This is a valid path
         if any(path_coord in desired_coordinates for path_coord in path):
