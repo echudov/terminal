@@ -8,6 +8,11 @@ from defensive_building_functions import DefensiveWallStrat
 
 from gamelib.util import debug_write
 
+# CONSTANTS
+
+# Enforced to not choose a spawn loc resulting in too short of a path
+MIN_PATH_LENGTH = 5
+
 
 class OffensiveInterceptorSpam:
     """Contains builder/simulator for intercepter spam attack strategy"""
@@ -123,7 +128,7 @@ class OffensiveDemolisherLine:
 
         # Offset coordinates one down or one left/right depending on where it places walls
         path = game_state.find_path_to_edge(dem_location)
-        while path is None or len(path) < 3:
+        while path is None or len(path) < MIN_PATH_LENGTH:
             if right:
                 dem_location[0] += 1
             else:

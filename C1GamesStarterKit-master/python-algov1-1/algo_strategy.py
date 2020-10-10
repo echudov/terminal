@@ -59,6 +59,8 @@ class AlgoStrategy(gamelib.AlgoCore):
     NORM_FACTORY_SP_PERCENT = 0.5
     # SP fraction dedicated to factories during bad times
     DEPRIORITIZE_FACTORY_SP_PERCENT = 0.3
+    # Enforced to not choose a spawn loc resulting in too short of a path
+    MIN_PATH_LENGTH = 5
 
     def __init__(self):
         super().__init__()
@@ -477,7 +479,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Get the damage estimate each path will take
         for location in location_options:
             path = game_state.find_path_to_edge(location)
-            if path.length() < 4:
+            if path.length() < self.MIN_PATH_LENGTH:
                 continue
             damage = 0
             for path_location in path:

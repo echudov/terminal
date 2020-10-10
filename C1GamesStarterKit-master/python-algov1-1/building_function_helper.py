@@ -2,14 +2,17 @@
 
 from collections import Counter
 
+import gamelib
 from gamelib.game_state import GameState
 from gamelib.game_map import GameMap
 
 # CONSTANTS
 
 # Fraction of turrets in first 3 rows to be considered "concentrated"
-MIN_FRONT_TURRET_DENSITY = 0.6
+MIN_FRONT_TURRET_DENSITY = 0.75
 FACTORY_ROW_MAX = 6  # Stops building factories once we hit this row
+# Enforced to not choose a spawn loc resulting in too short of a path
+MIN_PATH_LENGTH = 5
 
 
 def factory_location_helper(game_state: GameState) -> (int, int):
@@ -127,17 +130,16 @@ def coordinate_path_location_helper(
         if path is None:
             continue
 
-        # If final point is not on an edge, it's a self-destruct path
-        final_point = path[-1]
-        if final_point not in g_map.get_edge_locations(
-            g_map.TOP_LEFT
-        ) or final_point not in g_map.get_edge_locations(g_map.TOP_RIGHT):
-            continue  # Self-destruct path
+        # Path needs to be of some decent length (don't just wander in our base and die)
+        if len(path) < MIN_PATH_LENGTH:
+            continue
 
-        # This is a valid path
-        if any(path_coord in desired_coordinates for path_coord in path):
-            # This path goes through the desired coordinates at least once
-            loc = path[0]
-            break
+        # Need to do this ugly hack because "path" is not hashable
+        for coord in desired_coordinates:
+            for path_coord in path:
+                if coord[0] == path_coord[0] and coord[1] == path_coord[1]:
+                    # This path goes through the desired coordinates at least once
+                    loc = path[0]
+                    break
 
     return loc
