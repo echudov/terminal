@@ -130,8 +130,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.units = get_structure_dict(game_state, self.UNIT_ENUM_MAP, player=0)
         self.enemy_units = get_structure_dict(game_state, self.UNIT_ENUM_MAP, player=1)
 
-        # Perform moves
-        self.choose_and_execute_strategy(game_state, turn_state)  # Main entry point
+        # Perform moves - MAIN ENTRY POINT
+        self.choose_and_execute_strategy(game_state, turn_state)
 
         # Refresh regions attacked, if applicable
         if game_state.turn_number % self.RESET_ATTACKED_REGIONS_TURNS == 0:
@@ -405,10 +405,10 @@ class AlgoStrategy(gamelib.AlgoCore):
         Full doc on format of a game frame at in json-docs.html in the root of the Starterkit.
         """
 
-        # Let's record at what position we get scored on
         state = json.loads(action_frame_game_state)
         events = state["events"]
-        breaches = events["breach"]
+
+        # Record which regions got attacked (had enemy units inside)
         self_destructs = events["selfDestruct"]
         p2units = state["p2Units"]
         for unit_num in range(3, 6):
@@ -419,6 +419,8 @@ class AlgoStrategy(gamelib.AlgoCore):
                     if region != -1:
                         self.regions_attacked[region] += 1
 
+        # Record locations we got scored on
+        breaches = events["breach"]
         for breach in breaches:
             location = breach[0]
             unit_owner_self = True if breach[4] == 1 else False
@@ -464,6 +466,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         for location in locations:
             if not game_state.contains_stationary_unit(location):
                 filtered.append(location)
+
         return filtered
 
 
