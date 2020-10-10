@@ -250,10 +250,18 @@ class AlgoStrategy(gamelib.AlgoCore):
             # Fortify regions scored on locations
             regions = set()
             for loc in set(self.scored_on_locations):
-                for potential_turret in game_state.game_map.get_locations_in_range(loc, radius=1.5):
-                    if game_state.can_spawn(self.UNIT_ENUM_MAP["TURRET"], location=potential_turret):
-                        game_state.attempt_spawn(self.UNIT_ENUM_MAP["TURRET"], locations=potential_turret)
-                        game_state.attempt_upgrade(self.UNIT_ENUM_MAP["TURRET"], locations=potential_turret)
+                for potential_turret in game_state.game_map.get_locations_in_range(
+                    loc, radius=1.5
+                ):
+                    if game_state.can_spawn(
+                        self.UNIT_ENUM_MAP["TURRET"], location=potential_turret
+                    ):
+                        game_state.attempt_spawn(
+                            self.UNIT_ENUM_MAP["TURRET"], locations=potential_turret
+                        )
+                        game_state.attempt_upgrade(
+                            self.UNIT_ENUM_MAP["TURRET"], locations=potential_turret
+                        )
                         break
             # Factory Impact Diff deprioritized
             self.resolve_factory_impact_diff(game_state, deprioritize=True)
@@ -305,7 +313,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         possible_remaining = actual_factories_int - num
         for _ in range(possible_remaining):
             loc = factory_location_helper(game_state)
-            if loc is None or loc[1]:
+            if loc is None:
                 return  # Impossible to build a factory! (????)
 
             game_state.attempt_spawn(FACTORY, loc)
