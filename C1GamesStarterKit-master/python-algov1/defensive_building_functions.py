@@ -100,12 +100,9 @@ class DefensiveTurretWallStrat:
         game_state: GameState,
         unit_enum_map: dict,
         turret_location: (int, int) or [[int]],
-        sp_available: int,
         above: bool = True,
         left: bool = False,
         right: bool = False,
-        upgrade_wall: bool = False,
-        upgrade_turret: bool = False,
     ) -> int:
         """Builds a turret/wall pair at the given location and the wall(s) at the given bool offset(s).
 
@@ -113,12 +110,9 @@ class DefensiveTurretWallStrat:
             game_state (GameState): The current game state object
             unit_enum_map (dict): Maps NAME to unit enum
             turret_location ((int, int) or [[int]]): The turret's location
-            sp_available (int): The amount of SP left
             above (bool): Whether to build a wall above the turret
             left (bool): Whether to build a wall left of the turret
             right (bool): Whether to build a wall right of the turret
-            upgrade_wall: Whether to upgrade the wall
-            upgrade_turret: Whether to upgrade the turret
 
         Returns:
             built (int): Number of structures built (1 wall & 1 turret) = 2

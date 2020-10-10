@@ -50,6 +50,14 @@ Advanced strategy tips:
 
 
 class AlgoStrategy(gamelib.AlgoCore):
+    # CONSTANTS
+
+    RESET_ATTACKED_REGIONS_TURNS = 3  # Turns after which our attacked regions is reset
+    # SP fraction dedicated to factories during normal times
+    NORM_FACTORY_SP_PERCENT = 0.5
+    # SP fraction dedicated to factories during bad times
+    DEPRIORITIZE_FACTORY_SP_PERCENT = 0.3
+
     def __init__(self):
         super().__init__()
         # OUR INITIAL SETUP BELOW
@@ -114,31 +122,20 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Refresh meta-info
         self.health_diff = health_differential(game_state)
 
-        # Updating internal values of Defenses
+        # Updating internal values Defense values
         self.our_defense.update_defense(self.UNIT_ENUM_MAP, game_state)
         self.their_defense.update_defense(self.UNIT_ENUM_MAP, game_state)
 
-        # Refresh units list
+        # Refresh units list for both players
         self.units = get_structure_dict(game_state, self.UNIT_ENUM_MAP, player=0)
         self.enemy_units = get_structure_dict(game_state, self.UNIT_ENUM_MAP, player=1)
 
-        # Factory Impact Differential
-        (mp_diff, sp_diff) = compute_factory_impact_differential(
-            game_state, self.UNIT_ENUM_MAP
-        )
-        if (mp_diff > 3 and sp_diff > 9) or self.health_diff < 5:
-            # Already quite ahead in terms of factories OR losing and need to focus on defense
-
-            self.resolve_factory_impact_diff(game_state, deprioritize=True)
-
-        else:
-            self.resolve_factory_impact_diff(game_state)
-
         # Perform moves
         self.choose_and_execute_strategy(game_state, turn_state)  # Main entry point
-        # refresh regions attacked
-        if game_state.turn_number % 2 == 0:
-            self.regions_attacked.append({i : 0 for i in range(6)})
+
+        # Refresh regions attacked, if applicable
+        if game_state.turn_number % self.RESET_ATTACKED_REGIONS_TURNS == 0:
+            self.regions_attacked.append({i: 0 for i in range(6)})
 
         game_state.submit_turn()  # Must be called at the end
 
@@ -146,14 +143,92 @@ class AlgoStrategy(gamelib.AlgoCore):
     ####################### OUR ALGO FUNCTIONS ##########################
     #####################################################################
 
-    def resolve_factory_impact_diff(
-        self, game_state: GameState, deprioritize: bool = False
-    ) -> int:
-        """Evaluated the current Factory Impact Differential and accordingly builds/upgrades factories.
+    def choose_and_execute_strategy(self, game_state: GameState, turn_state: str):
+        """Wrapper to choose and execute a strategy based on the game state.
 
         Args:
             game_state (GameState): The current GameState object
-            deprioritize (bool): Whether we should deprioritize building/upgrading factories. If True, will build/upgrade maximum 1 factory
+            turn_state (str): Turn state (for frame analysis)
+        """
+
+        # self.on_action_frame(turn_state)
+
+        # attacked_region = None
+        # max_attacks = 0
+        # for i in range(6):
+        #     if self.regions_attacked[-1][i] > max_attacks:
+        #         max_attacks = self.regions_attacked[-1][i]
+        #         attacked_region = i
+        # if attacked_region is not None:
+        #     self.our_defense.regions[i].fortify_region_defenses(game_state, self.UNIT_ENUM_MAP)
+
+        # self.our_defense.fortify_defenses(game_state, self.UNIT_ENUM_MAP)
+
+        # For the first 3 turns, just get set up
+        if game_state.turn_number < 3:
+            self.starting_strategy(game_state)
+            return
+
+        # TODO - Have they gotten far in our base?
+        defenses_breached = True
+        if not defenses_breached:
+            # Keep upgrading/building factories (max 50% of SP)
+            self.resolve_factory_impact_diff(game_state)
+
+            # TODO - Do they have many structures near their front?
+            concentrated_frontal_structures = True
+            if concentrated_frontal_structures:
+                num_demolishers = math.floor(
+                    game_state.number_affordable(DEMOLISHER) / 2
+                )
+
+                # TODO - Target the specific area (?)
+                row = 7  # Place near middle of y-coord
+                x_left_bound = 13 - row
+                x_right_bound = 14 + row
+                OffensiveDemolisherLine().build_demolisher_line(
+                    game_state,
+                    self.UNIT_ENUM_MAP,
+                    num_demolishers,
+                    [[x_left_bound, row], [x_right_bound, row]],
+                )
+            else:
+                num_interceptors = math.floor(
+                    game_state.number_affordable(INTERCEPTOR) / 2
+                )
+
+                # TODO - Find their least-defended region and target
+                row = 7  # Place near middle of y-coord
+                x_left_bound = 13 - row
+                x_right_bound = 14 + row
+
+                OffensiveInterceptorSpam().build_interceptor_spam_multiple_locs(
+                    game_state,
+                    self.UNIT_ENUM_MAP,
+                    num_interceptors,
+                    [[x_left_bound, row], [x_right_bound, row]],
+                )
+        else:
+            self.resolve_factory_impact_diff(game_state, deprioritize=True)
+
+            # TODO - More Intelligent Interceptor Defense
+            self.defend_with_interceptors(game_state)
+
+            # TODO - What regions have been affected by the breach?
+            breached_regions = []
+
+            # TODO - Fortify those regions closest to the front
+
+            # TODO - Use defense-reinforcement algo
+
+    def resolve_factory_impact_diff(
+        self, game_state: GameState, deprioritize: bool = False
+    ) -> int:
+        """Evaluated the current Factory Impact Differential and accordingly builds/upgrades factories (max 50% of SP). Prioritizes UPGRADING over building!
+
+        Args:
+            game_state (GameState): The current GameState object
+            deprioritize (bool): Whether we should deprioritize building/upgrading factories. If True, will build/upgrade maximum 30% of SP
 
         Returns:
             num_improved (int): The number of factories built/upgraded
@@ -165,149 +240,29 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # Factories we build should be a function of how many we can afford
         possible_factories = game_state.number_affordable(FACTORY)
+        actual_factories = (
+            self.DEPRIORITIZE_FACTORY_SP_PERCENT * possible_factories
+            if deprioritize
+            else self.NORM_FACTORY_SP_PERCENT * possible_factories
+        )
+        actual_factories_int = math.floor(actual_factories)
+
+        num = 0  # Counter: Don't allow to exceed actual_factories_int
+
+        # Prioritize upgrading over building
         our_factories = self.units[FACTORY]
+        for factory in our_factories:
+            if not factory.upgraded:
+                if num == actual_factories_int:
+                    return
 
-        # If can only build 1, do it:
-        if possible_factories == 1 or deprioritize:
-            # Prioritize upgrading over building
-            for factory in our_factories:
-                if not factory.upgraded:
-                    num = game_state.attempt_upgrade((factory.x, factory.y))
-                    if num != 0:
-                        return
+                num += game_state.attempt_upgrade((factory.x, factory.y))
 
-            # All factories already upgraded
+        # Upgraded all possible ones. Now build any possible remaining
+        possible_remaining = actual_factories_int - num
+        for _ in possible_remaining:
             loc = factory_location_helper(game_state)
-            num = game_state.attempt_spawn(FACTORY, loc)
-        else:
-            # Otherwise, build half of the max possible
-            actual_factories = math.floor(possible_factories / 2)
-            num = 0  # Don't allow to exceed actual_factories
-
-            # Prioritize upgrading over building
-            for factory in our_factories:
-                if not factory.upgraded:
-                    if num == actual_factories:
-                        return
-
-                    num += game_state.attempt_upgrade((factory.x, factory.y))
-
-            # Upgraded all possible ones. Now build any possible remaining
-            for _ in range(actual_factories - num):
-                loc = factory_location_helper(game_state)
-                num += game_state.attempt_spawn(FACTORY, loc)
-
-            return
-
-    def choose_and_execute_strategy(self, game_state: GameState, turn_state):
-        """Wrapper to choose and execute a strategy based on the game state.
-
-        Args:
-            game_state (GameState): The current GameState object
-        """
-
-        # TODO
-        spent_on_factories = 0
-        spent_on_defenses = 0
-
-        # For the first 3 turns, just get set up
-        if game_state.turn_number < 3:
-            self.starting_strategy(game_state)
-            return
-        self.on_action_frame(turn_state)
-
-        attacked_region = None
-        max_attacks = 0
-        for i in range(6):
-            if self.regions_attacked[-1][i] > max_attacks:
-                max_attacks = self.regions_attacked[-1][i]
-                attacked_region = i
-        if attacked_region is not None:
-            self.our_defense.regions[i].fortify_region_defenses(game_state, self.UNIT_ENUM_MAP)
-
-        self.our_defense.fortify_defenses(game_state, self.UNIT_ENUM_MAP)
-
-        # TODO Temp
-        if (game_state.turn_number % 2) == 0:
-            self.stall_with_interceptors(game_state)
-        else:
-            self.demolisher_line_strategy(game_state)
-        '''
-        # Choose a strategy (aggressive, medium, passive)
-        aggressive = (game_state.turn_number % 2) == 0
-        medium = (game_state.turn_number % 2) == 0
-        passive = are_losing(game_state)
-
-        # Execute it
-        if aggressive:
-            self.aggressive_strategy(game_state)
-        elif medium:
-            self.medium_strategy(game_state)
-        elif passive:
-            self.passive_strategy(game_state)
-        '''
-
-    def aggressive_strategy(self, game_state: GameState):
-        """Executes the aggressive strategy.
-
-        Args:
-            game_state (GameState): The current GameState object
-        """
-
-        # TODO
-
-        locs = [[20, 6], [6, 7]]
-
-        OffensiveInterceptorSpam().build_interceptor_spam_multiple_locs(
-            game_state,
-            self.UNIT_ENUM_MAP,
-            game_state.number_affordable(INTERCEPTOR),
-            locs,
-        )
-
-    def medium_strategy(self, game_state: GameState):
-        """Executes the medium strategy.
-
-        Args:
-            game_state (GameState): The current GameState object
-        """
-
-        # TODO
-
-        DefensiveTurretWallStrat().build_turret_wall_pair(
-            game_state,
-            self.UNIT_ENUM_MAP,
-            (13, 12),
-            game_state.get_resource(SP),
-            above=True,
-            right=True,
-        )
-
-        OffensiveDemolisherLine().build_demolisher_line(
-            game_state, self.UNIT_ENUM_MAP, 1, (5, 5)
-        )
-
-        locs = [[20, 6], [6, 7]]
-
-        OffensiveInterceptorSpam().build_interceptor_spam_multiple_locs(
-            game_state,
-            self.UNIT_ENUM_MAP,
-            game_state.number_affordable(INTERCEPTOR),
-            locs,
-        )
-
-    def passive_strategy(self, game_state: GameState):
-        """Executes the passive strategy.
-
-        Args:
-            game_state (GameState): The current GameState object
-        """
-
-        # TODO
-
-        DefensiveWallStrat().build_h_wall_line(
-            game_state, self.UNIT_ENUM_MAP, (0, 13), game_state.ARENA_SIZE, right=True
-        )
+            game_state.attempt_spawn(FACTORY, loc)
 
     def starting_strategy(self, game_state: GameState):
         """Wrapper for executing a strategy for the first 3 rounds of the game.
@@ -385,7 +340,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         game_state.attempt_spawn(INTERCEPTOR, [17, 3], num=3)
 
     #####################################################################
-    ######## FUNCTIONS THEY HAVE GIVEN US AND MAY PROVE USEFUL ##########
+    ######################### HELPER FUNCTIONS ##########################
     #####################################################################
 
     def build_reactive_defense(self, game_state: GameState, turn_state: str):
@@ -396,6 +351,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
 
         # TODO Check this!
+        # TODO - Currently unused!
 
         self.on_action_frame(turn_state)
 
@@ -414,7 +370,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         )
 
         DefensiveTurretWallStrat().build_turret_wall_pair(
-            game_state, self.UNIT_ENUM_MAP, placement, game_state.get_resource(0)
+            game_state, self.UNIT_ENUM_MAP, placement, above=True
         )
 
         for location in self.scored_on_locations:
@@ -422,83 +378,24 @@ class AlgoStrategy(gamelib.AlgoCore):
             if game_state.can_spawn(TURRET, build_location):
                 game_state.attempt_spawn(TURRET, build_location)
 
-    def stall_with_interceptors(self, game_state: GameState):
+    def defend_with_interceptors(self, game_state: GameState):
         """
         Send out interceptors at random locations to defend our base from enemy moving units.
         """
-        # We can spawn moving units on our edges so a list of all our edge locations
-        friendly_edges = game_state.game_map.get_edge_locations(
-            game_state.game_map.BOTTOM_LEFT
-        ) + game_state.game_map.get_edge_locations(game_state.game_map.BOTTOM_RIGHT)
 
-        # Remove locations that are blocked by our own structures
-        # since we can't deploy units there.
-        deploy_locations = self.filter_blocked_locations(friendly_edges, game_state)
+        # TODO - Make Intelligent (make Interceptors pass through OUR weakest regions)
 
-        # While we have remaining MP to spend lets send out interceptors randomly.
-        while (
-            game_state.get_resource(MP) >= game_state.type_cost(INTERCEPTOR)[MP]
-            and len(deploy_locations) > 0
-        ):
-            # Choose a random deploy location.
-            deploy_index = random.randint(0, len(deploy_locations) - 1)
-            deploy_location = deploy_locations[deploy_index]
+        num_interceptors = math.floor(game_state.number_affordable(INTERCEPTOR) / 2)
+        row = 7  # Place near middle of y-coord
+        x_left_bound = 13 - row
+        x_right_bound = 14 + row
 
-            game_state.attempt_spawn(INTERCEPTOR, deploy_location)
-            """
-            We don't have to remove the location since multiple mobile 
-            units can occupy the same space.
-            """
-
-    def demolisher_line_strategy(self, game_state: GameState):
-        """
-        Build a line of the cheapest stationary unit so our demolisher can attack from long range.
-        """
-
-        # TODO Use if enemy has lots of structures near the top to clean out that part
-
-        # Now let's build out a line of stationary units. This will prevent our demolisher from running into the enemy base.
-        # Instead they will stay at the perfect distance to attack the front two rows of the enemy base.
-        for x in range(27, 5, -1):
-            if game_state.can_spawn(WALL, [x, 11]):
-                game_state.attempt_spawn(WALL, [x, 11])
-
-        # Now spawn demolishers next to the line
-        game_state.attempt_spawn(
-            DEMOLISHER, [24, 10], game_state.number_affordable(DEMOLISHER)
+        OffensiveInterceptorSpam().build_interceptor_spam_multiple_locs(
+            game_state,
+            self.UNIT_ENUM_MAP,
+            num_interceptors,
+            [[x_left_bound, row], [x_right_bound, row]],
         )
-
-    def least_damage_spawn_location(self, game_state, location_options):
-        """
-        This function will help us guess which location is the safest to spawn moving units from.
-        It gets the path the unit will take then checks locations on that path to
-        estimate the path's damage risk.
-        """
-        damages = []
-        # Get the damage estimate each path will take
-        for location in location_options:
-            path = game_state.find_path_to_edge(location)
-            if path.length() < 4:
-                continue
-            damage = 0
-            for path_location in path:
-                # Get number of enemy turrets that can attack each location and multiply by turret damage
-                damage += (
-                    len(game_state.get_attackers(path_location, 0))
-                    * gamelib.GameUnit(TURRET, game_state.config).damage_i
-                )
-            damages.append(damage)
-
-        # Now just return the location that takes the least damage
-        return location_options[damages.index(min(damages))]
-
-    def filter_blocked_locations(self, locations, game_state):
-        filtered = []
-        for location in locations:
-            if not game_state.contains_stationary_unit(location):
-                filtered.append(location)
-        return filtered
-
 
     def on_action_frame(self, action_frame_game_state: str):
         """
@@ -533,6 +430,41 @@ class AlgoStrategy(gamelib.AlgoCore):
                 gamelib.debug_write(
                     "All locations: {}".format(self.scored_on_locations)
                 )
+
+    #####################################################################
+    ########### USEFUL BUT UNUSED FUNCTIONS THEY'VE PROVIDED ############
+    #####################################################################
+
+    def least_damage_spawn_location(self, game_state, location_options):
+        """
+        This function will help us guess which location is the safest to spawn moving units from.
+        It gets the path the unit will take then checks locations on that path to
+        estimate the path's damage risk.
+        """
+        damages = []
+        # Get the damage estimate each path will take
+        for location in location_options:
+            path = game_state.find_path_to_edge(location)
+            if path.length() < 4:
+                continue
+            damage = 0
+            for path_location in path:
+                # Get number of enemy turrets that can attack each location and multiply by turret damage
+                damage += (
+                    len(game_state.get_attackers(path_location, 0))
+                    * gamelib.GameUnit(TURRET, game_state.config).damage_i
+                )
+            damages.append(damage)
+
+        # Now just return the location that takes the least damage
+        return location_options[damages.index(min(damages))]
+
+    def filter_blocked_locations(self, locations, game_state):
+        filtered = []
+        for location in locations:
+            if not game_state.contains_stationary_unit(location):
+                filtered.append(location)
+        return filtered
 
 
 if __name__ == "__main__":

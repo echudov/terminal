@@ -12,8 +12,6 @@ from gamelib.util import debug_write
 class OffensiveInterceptorSpam:
     """Contains builder/simulator for intercepter spam attack strategy"""
 
-    # TODO: Simulators for each below
-
     def build_interceptor_spam_multiple_locs(
         self,
         game_state: GameState,
