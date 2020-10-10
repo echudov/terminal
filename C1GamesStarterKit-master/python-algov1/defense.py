@@ -249,7 +249,9 @@ class Defense:
                     or unit.unit_type == unit_enum_map["TURRET"]
                     or unit.unit_type == unit_enum_map["FACTORY"]
                 ):
+                    gamelib.util.debug_write(self.units)
                     self.units[unit.unit_type].append(unit)
+                    gamelib.util.debug_write(self.units)
         gamelib.util.debug_write(self.units)
 
     def get_defense_undefended_tiles(self):

@@ -28,9 +28,9 @@ class Defense:
         self.coordinate_regions = np.full(shape=(28, 14), fill_value=-1)
         self.history = []
         self.units = {
-            unit_enum_map["TURRET"]: set(),
-            unit_enum_map["FACTORY"]: set(),
-            unit_enum_map["WALL"]: set(),
+            unit_enum_map["TURRET"]: [],
+            unit_enum_map["FACTORY"]: [],
+            unit_enum_map["WALL"]: [],
         }
 
     def create_our_regions(self, unit_enum_map: dict):
@@ -224,9 +224,9 @@ class Defense:
         ]
         # resets units
         self.units = {
-            unit_enum_map["TURRET"]: set(),
-            unit_enum_map["FACTORY"]: set(),
-            unit_enum_map["WALL"]: set(),
+            unit_enum_map["TURRET"]: [],
+            unit_enum_map["FACTORY"]: [],
+            unit_enum_map["WALL"]: [],
         }
 
         for i, region in self.regions.items():
@@ -237,7 +237,7 @@ class Defense:
             region.calculate_region_states(unit_enum_map, units)
 
         for x in range(game_state.ARENA_SIZE):
-            for y in range(game_state.HALF_ARENA):
+            for y in range(game_state.HALF_ARENA * self.player_id, game_state.HALF_ARENA * (1 + self.player_id)):
                 if not game_state.game_map.in_arena_bounds((x, y)):
                     continue
                 unit = game_state.game_map[x, y]
@@ -249,7 +249,10 @@ class Defense:
                     or unit.unit_type == unit_enum_map["TURRET"]
                     or unit.unit_type == unit_enum_map["FACTORY"]
                 ):
-                    self.units[unit.unit_type] = unit
+                    gamelib.util.debug_write(self.units)
+                    self.units[unit.unit_type].append(unit)
+                    gamelib.util.debug_write(self.units)
+        gamelib.util.debug_write(self.units)
 
     def get_defense_undefended_tiles(self):
         """
@@ -359,18 +362,20 @@ class Defense:
         game_state: gamelib.GameState,
         unit_enum_map: dict,
         criteria: str = "DEFENSIVE POWER",
+        sp_left: int = 3
     ):
         """
         Fortifies defenses by finding the weakest region by our criteria
         and fortifying based on the Region fortify_region_defenses subroutine
+        @param sp_left: Amount of sp points to leave after defenses are fortified
         @param game_state: Game State to pass in
-        @param criteria:
+        @param criteria: Criteria to evaluate weakest region on
         """
 
         # TODO - Later remove count
 
         count = 0
-        while game_state.get_resource(0, 0) >= 4 and count < 30:
+        while game_state.get_resource(0, 0) > sp_left and count < 30:
             if game_state.turn_number > self.MIN_TURN_TO_FORTIFY_BACK_REGIONS:
                 # Check the back regions too (fortify factories, etc.)
                 weakest_region = self.weakest_region(

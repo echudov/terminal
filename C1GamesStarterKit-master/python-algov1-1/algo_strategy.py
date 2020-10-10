@@ -128,8 +128,8 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # Refresh units list for both players
         # TODO - Refactor using Defense - Use the .units attribute from there
-        self.units = get_structure_dict(game_state, self.UNIT_ENUM_MAP, player=0)
-        self.enemy_units = get_structure_dict(game_state, self.UNIT_ENUM_MAP, player=1)
+        self.units = self.our_defense.units
+        self.enemy_units = self.their_defense.units
 
         # Perform moves - MAIN ENTRY POINT
         self.choose_and_execute_strategy(game_state, turn_state)
