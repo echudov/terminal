@@ -9,7 +9,7 @@ from gamelib.game_map import GameMap
 
 # Fraction of turrets in first 3 rows to be considered "concentrated"
 MIN_FRONT_TURRET_DENSITY = 0.6
-FACTORY_ROW_MAX = 6
+FACTORY_ROW_MAX = 6  # Stops building factories once we hit this row
 
 
 def factory_location_helper(game_state: GameState) -> (int, int):
