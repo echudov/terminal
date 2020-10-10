@@ -8,7 +8,7 @@ class Defense:
     # CONSTANTS
 
     # Relative weight (lower means more emphasis on turrets)
-    TURRET_TO_WALL_RATIO = 0.75
+    TURRET_TO_WALL_RATIO = 1
     MIN_TURN_TO_FORTIFY_BACK_REGIONS = 4  # Used in fortify_defenses
     MIN_TURN_REBUILD = 13  # Min turn to start re-building low-health structures
     PERCENT_TO_REBUILD_TURRET = 0.5  # Threshold for above
