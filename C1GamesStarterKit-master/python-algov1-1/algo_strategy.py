@@ -214,21 +214,24 @@ class AlgoStrategy(gamelib.AlgoCore):
                     [x_coord, y_coord],
                 )
             else:
-                num_interceptors = math.floor(
-                    game_state.number_affordable(INTERCEPTOR) / 2
-                )
-
+                # Perform an interceptor spam on their weakest region
                 # TODO - Find their least-defended region and target
+                w_region_id = self.their_defense.weakest_region(
+                    self.UNIT_ENUM_MAP, criteria="UNDEFENDED TILES"
+                )
+                w_region = self.their_defense.regions[w_region_id]
+                w_region_coords = w_region.coordinates
 
                 row = 7  # Place near middle of y-coord
                 x_left_bound = 13 - row
-                x_right_bound = 14 + row
 
-                OffensiveInterceptorSpam().build_interceptor_spam_multiple_locs(
+                num_interceptors = math.floor(game_state.number_affordable(INTERCEPTOR))
+
+                OffensiveInterceptorSpam().build_interceptor_spam_single_loc(
                     game_state,
                     self.UNIT_ENUM_MAP,
                     num_interceptors,
-                    [[x_left_bound, row], [x_right_bound, row]],
+                    [x_left_bound, row],
                 )
         else:
             # EMERGENCY CASE - Fortify immediately
