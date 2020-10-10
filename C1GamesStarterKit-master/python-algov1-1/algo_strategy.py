@@ -198,11 +198,41 @@ class AlgoStrategy(gamelib.AlgoCore):
                 if x_half:
                     # Concentration on LEFT HALF
                     wall_x_coord = 13 - (y_coord - 3)
-                    dem_x_coord = y_coord - 14  # Their rows start at y = 14
+                    wall_y_coord = y_coord - 3
+                    length = wall_y_coord
+                    demolisher_x_coord = wall_x_coord + 1
+                    demolisher_y_coord = wall_y_coord - 1
+                    while not pathable((demolisher_x_coord, demolisher_y_coord)):
+                        demolisher_x_coord += 1
+                        demolisher_y_coord -= 1
+                    num_demolishers = math.floor(game_state.number_affordable(DEMOLISHER))
+                    OffensiveDemolisherLine().build_demolisher_line(
+                        game_state,
+                        self.UNIT_ENUM_MAP,
+                        num_demolishers,
+                        wall_location=[wall_x_coord, wall_y_coord],
+                        demolisher_location=[demolisher_x_coord, demolisher_y_coord],
+                        right=x_half
+                    )
                 else:
                     # Concentration on RIGHT HALF
-                    wall_
-                    dem_x_coord = 27 - (y_coord - 14)  # Their rows start at y = 14
+                    wall_x_coord = 27 - (13 - (y_coord - 3))
+                    wall_y_coord = y_coord - 3
+                    length = wall_y_coord
+                    demolisher_x_coord = wall_x_coord + 1
+                    demolisher_y_coord = wall_y_coord - 1
+                    while not pathable((demolisher_x_coord, demolisher_y_coord)):
+                        demolisher_x_coord += 1
+                        demolisher_y_coord -= 1
+                    num_demolishers = math.floor(game_state.number_affordable(DEMOLISHER))
+                    OffensiveDemolisherLine().build_demolisher_line(
+                        game_state,
+                        self.UNIT_ENUM_MAP,
+                        num_demolishers,
+                        wall_location=[wall_x_coord, wall_y_coord],
+                        demolisher_location=[demolisher_x_coord, demolisher_y_coord],
+                        right=x_half
+                    )
 
                 wall_loc = [x_coord, y_coord - 2]
                 dem_loc = [x_coord, y_coord - 3]

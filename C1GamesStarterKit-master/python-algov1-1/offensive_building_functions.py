@@ -100,6 +100,7 @@ class OffensiveDemolisherLine:
         game_state: GameState,
         unit_enum_map: dict,
         num_demolishers: int,
+        num_walls: int,
         wall_location: (int, int) or [int],
         dem_location: (int, int) or [int],
         right: bool = True,
