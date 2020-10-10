@@ -101,8 +101,8 @@ class OffensiveDemolisherLine:
         unit_enum_map: dict,
         num_demolishers: int,
         num_walls: int,
-        wall_location: (int, int) or [int],
-        dem_location: (int, int) or [int],
+        wall_location: (int, int) or [int, int],
+        dem_location: (int, int) or [int, int],
         right: bool = True,
     ) -> bool:
         """Builds a line of walls starting at the given location and stacked demolishers 1 tile back
@@ -118,12 +118,12 @@ class OffensiveDemolisherLine:
 
         # Build a full line towards right of location (might overflow but fine)
         DefensiveWallStrat().build_h_wall_line(
-            game_state, unit_enum_map, wall_location, game_state.ARENA_SIZE, right=right
+            game_state, unit_enum_map, wall_location, num_walls, right=right
         )
 
         # Build as many demolishers as possible at dem_location
         for _ in range(game_state.number_affordable(unit_enum_map["DEMOLISHER"])):
-            dem_num += game_state.attempt_spawn(
+            game_state.attempt_spawn(
                 unit_enum_map["DEMOLISHER"], dem_location
             )
 
