@@ -327,6 +327,9 @@ class AlgoStrategy(gamelib.AlgoCore):
         possible_remaining = actual_factories_int - num
         for _ in range(possible_remaining):
             loc = factory_location_helper(game_state)
+            if loc is None:
+                return  # Impossible to build a factory! (????)
+
             game_state.attempt_spawn(FACTORY, loc)
 
     def starting_strategy(self, game_state: GameState):
