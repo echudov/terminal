@@ -251,13 +251,12 @@ class AlgoStrategy(gamelib.AlgoCore):
 
             # Fortify regions scored on locations
             regions = set()
-            for loc in self.scored_on_locations:
-                regions.add(self.our_defense.get_region(loc))
-            for region in regions:
-                self.our_defense.regions[region].fortify_region_defenses(
-                    game_state, self.UNIT_ENUM_MAP
-                )
-
+            for loc in set(self.scored_on_locations):
+                for potential_turret in game_state.game_map.get_locations_in_range(loc, radius=2):
+                    if potential_turret[1] < 13 and game_state.can_spawn(self.UNIT_ENUM_MAP["TURRET"], location=potential_turret):
+                        game_state.attempt_spawn(self.UNIT_ENUM_MAP["TURRET"], locations=potential_turret)
+                        game_state.attempt_upgrade(self.UNIT_ENUM_MAP["TURRET"], locations=potential_turret)
+                        break
             # Factory Impact Diff deprioritized
             self.resolve_factory_impact_diff(game_state, deprioritize=True)
 
