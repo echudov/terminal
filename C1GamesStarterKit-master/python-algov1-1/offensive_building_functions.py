@@ -122,8 +122,6 @@ class OffensiveDemolisherLine:
 
         # Build as many demolishers as possible at dem_location
         for _ in range(game_state.number_affordable(unit_enum_map["DEMOLISHER"])):
-            dem_num += game_state.attempt_spawn(
-                unit_enum_map["DEMOLISHER"], dem_location
-            )
+            game_state.attempt_spawn(unit_enum_map["DEMOLISHER"], dem_location)
 
         # TODO - Delete walls that allow us to enter regions

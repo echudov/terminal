@@ -83,6 +83,8 @@ def demolisher_location_helper(
     x_left_bound = 13 - highest_concentration_y
     x_right_bound = 14 + highest_concentration_y
     for x in range(x_left_bound, x_right_bound + 1):
+        # Go through every x in the most concentrated row (if turret, count)
+
         if x <= 13 and x in their_turrets_x_coord:
             left_right_half_counter.update({"LEFT": 1})
         elif x >= 14 and x in their_turrets_x_coord:
