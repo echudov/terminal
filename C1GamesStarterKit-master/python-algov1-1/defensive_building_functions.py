@@ -17,7 +17,7 @@ class DefensiveWallStrat:
         starting_location: (int, int) or [[int]],
         length: int,
         right: bool = True,
-    ) -> int:
+    ) -> [[int]]:
         """
         Used for placing a horizontal line of walls
         @param game_state: GameState object containing current gamestate info
@@ -25,10 +25,10 @@ class DefensiveWallStrat:
         @param starting_location: (x, y) or [[x, y]]
         @param length: duh
         @param right: whether the wall goes right or left of the starting location
-        @return: num_walls: The number of walls actually built
+        Returns: List of locations where a wall was sucessfully places
         """
 
-        built = 0  # To return
+        wall_placed_locs = []
 
         if right:
             locations = [
@@ -36,10 +36,10 @@ class DefensiveWallStrat:
             ]
 
             for loc in locations:
-                if not game_state.can_spawn(unit_enum_map["WALL"], loc):
-                    continue
-
-                built += game_state.attempt_spawn(unit_enum_map["WALL"], loc)
+                if game_state.can_spawn(unit_enum_map["WALL"], loc):
+                    succ = game_state.attempt_spawn(unit_enum_map["WALL"], loc)
+                    if succ == 1:
+                        wall_placed_locs.append(loc)
 
         if not right:
             locations = [
@@ -47,12 +47,12 @@ class DefensiveWallStrat:
             ]
 
             for loc in locations:
-                if not game_state.can_spawn(unit_enum_map["WALL"], loc):
-                    continue
+                if game_state.can_spawn(unit_enum_map["WALL"], loc):
+                    game_state.attempt_spawn(unit_enum_map["WALL"], loc)
+                    if succ == 1:
+                        wall_placed_locs.append(loc)
 
-                built += game_state.attempt_spawn(unit_enum_map["WALL"], loc)
-
-        return built
+        return wall_placed_locs
 
     def simulate_wall_line(
         self,

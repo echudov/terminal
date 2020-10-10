@@ -7,7 +7,7 @@ from gamelib.game_map import GameMap
 
 # CONSTANTS
 
-# Fraction of turret in first 3 rows to be considered concentrated
+# Fraction of turrets in first 3 rows to be considered "concentrated"
 MIN_FRONT_TURRET_DENSITY = 0.6
 
 
@@ -67,7 +67,7 @@ def demolisher_location_helper(
             # Only count if within front 3 rows
             y_coords.update({turret.y: 1})
 
-    if sum(list(y_coords.elements())) < MIN_FRONT_TURRET_DENSITY * len(their_turrets):
+    if sum(y_coords.values()) < MIN_FRONT_TURRET_DENSITY * len(their_turrets):
         return None  # Their front 3 rows are not that concentrated
 
     # Returns a list of tuples (elem, count)
@@ -95,3 +95,48 @@ def demolisher_location_helper(
     left_half_more_conc = True if most_conc_half == "LEFT" else False
 
     return highest_concentration_y, left_half_more_conc
+
+
+def coordinate_path_location_helper(
+    game_state: GameState, desired_coordinates: [[int]]
+):
+    """Returns a VALID spawn location such that a mobile unit will pass at least once through the given coordinates. Useful for routing units through a specific region.
+    Returns None if impossible.
+
+    Args:
+        game_state: The current GameState object
+        desired_coordinates: Try to route the unit through at least one of these coordinates
+
+    Returns:
+        spawn_location (int, int): Location to spawn, or None
+    """
+
+    # Find where to place mobile unit to pass through 1 of those coords
+    loc = None
+
+    # Iterate through all possible spawn locations
+    g_map = game_state.game_map
+    possible_spawn_locs = g_map.get_edge_locations(
+        g_map.BOTTOM_LEFT
+    ) + g_map.get_edge_locations(g_map.BOTTOM_RIGHT)
+    for spawn_loc in possible_spawn_locs:
+        path = game_state.find_path_to_edge(spawn_loc)
+
+        # If final point is not on an edge, it's a self-destruct path
+        final_point = path[-1]
+        if final_point not in g_map.get_edge_locations(
+            g_map.TOP_LEFT
+        ) or final_point not in g_map.get_edge_locations(g_map.TOP_RIGHT):
+            continue  # Self-destruct path
+
+        # If starting point is blocked, skip - not useful
+        if game_state.contains_stationary_unit(path[0]):
+            continue
+
+        # This is a valid path
+        if any(path_coord in desired_coordinates for path_coord in path):
+            # This path goes through the desired coordinates at least once
+            loc = path[0]
+            break
+
+    return loc
