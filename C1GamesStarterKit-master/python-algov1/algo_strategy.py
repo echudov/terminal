@@ -4,6 +4,7 @@ import math
 import warnings
 from sys import maxsize
 import json
+import time
 
 from gamelib.game_state import GameState
 from gamelib.game_map import GameMap
@@ -57,7 +58,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.enemy_units = {}  # Same as above, fo
         # r opponent
         self.units = {}  # Dict mapping unit type to unit objects
-        self.regions_attacked = {i: 0 for i in range(6)}
+        self.regions_attacked = [{i: 0 for i in range(6)}]
         seed = random.randrange(maxsize)
         random.seed(seed)
         gamelib.debug_write("Random seed: {}".format(seed))
@@ -127,18 +128,17 @@ class AlgoStrategy(gamelib.AlgoCore):
         )
         if (mp_diff > 3 and sp_diff > 9) or self.health_diff < 5:
             # Already quite ahead in terms of factories OR losing and need to focus on defense
+
             self.resolve_factory_impact_diff(game_state, deprioritize=True)
+
         else:
             self.resolve_factory_impact_diff(game_state)
 
-        # Build Reactive Defense
-
-
         # Perform moves
-        self.choose_and_execute_strategy(game_state. turn_state)  # Main entry point
+        self.choose_and_execute_strategy(game_state, turn_state)  # Main entry point
         # refresh regions attacked
         if game_state.turn_number % 2 == 0:
-            self.regions_attacked = {i : 0 for i in range(6)}
+            self.regions_attacked.append({i : 0 for i in range(6)})
 
         game_state.submit_turn()  # Must be called at the end
 
@@ -207,18 +207,32 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
 
         # TODO
+        spent_on_factories = 0
+        spent_on_defenses = 0
 
         # For the first 3 turns, just get set up
         if game_state.turn_number < 3:
             self.starting_strategy(game_state)
             return
-        self.build_reactive_defense(game_state, turn_state)
+        self.on_action_frame(turn_state)
+
+        attacked_region = None
+        max_attacks = 0
+        for i in range(6):
+            if self.regions_attacked[-1][i] > max_attacks:
+                max_attacks = self.regions_attacked[-1][i]
+                attacked_region = i
+        if attacked_region is not None:
+            self.our_defense.regions[i].fortify_region_defenses(game_state, self.UNIT_ENUM_MAP)
+
+        self.our_defense.fortify_defenses(game_state, self.UNIT_ENUM_MAP)
+
         # TODO Temp
         if (game_state.turn_number % 2) == 0:
             self.stall_with_interceptors(game_state)
         else:
             self.demolisher_line_strategy(game_state)
-
+        '''
         # Choose a strategy (aggressive, medium, passive)
         aggressive = (game_state.turn_number % 2) == 0
         medium = (game_state.turn_number % 2) == 0
@@ -231,6 +245,7 @@ class AlgoStrategy(gamelib.AlgoCore):
             self.medium_strategy(game_state)
         elif passive:
             self.passive_strategy(game_state)
+        '''
 
     def aggressive_strategy(self, game_state: GameState):
         """Executes the aggressive strategy.
@@ -384,7 +399,15 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         self.on_action_frame(turn_state)
 
-        attacked_region = max(self.regions_attacked, key=self.regions_attacked.get)
+        attacked_region = None
+        max_attacks = 0
+        for i in range(6):
+            if self.regions_attacked[-1][i] > max_attacks:
+                max_attacks = self.regions_attacked[-1][i]
+                attacked_region = i
+        if attacked_region is None:
+            self.our_defense.fortify_defenses(game_state, self.UNIT_ENUM_MAP)
+            return
 
         placement = self.our_defense.regions[attacked_region].random_turret_placement(
             game_state
@@ -475,6 +498,7 @@ class AlgoStrategy(gamelib.AlgoCore):
             if not game_state.contains_stationary_unit(location):
                 filtered.append(location)
         return filtered
+
 
     def on_action_frame(self, action_frame_game_state: str):
         """

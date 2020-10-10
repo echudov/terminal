@@ -1,7 +1,8 @@
 import gamelib
 import numpy as np
 import random
-
+import time
+import math
 
 class Region:
     def __init__(
@@ -117,6 +118,17 @@ class Region:
         """
         self.grid_type[key[0] - self.xbounds[0], key[1] - self.ybounds[0]] = value[0]
         self.grid_unit[key[0] - self.xbounds[0], key[1] - self.ybounds[0]] = value[1]
+
+    def in_bounds(self, coords: tuple or list) -> bool:
+        """
+        Checks if coordinate is in bounds
+        @param coords: (x, y) pair
+        @return: whether it's in bounds
+        """
+        if self.xbounds[0] <= coords[0] <= self.xbounds[1] and self.ybounds[0] <= coords[1] <= self.ybounds[1]:
+            return True
+        else:
+            return False
 
     def on_edge(self, coords: tuple or list) -> bool:
         """
@@ -337,7 +349,7 @@ class Region:
     def average_tile_damage(self):
         """
         Calculates the average amount of damage a unit might take on tile
-        @return:
+        @return: ^^^
         """
         total_damage = 0
         for coord in self.coordinates:
@@ -347,6 +359,13 @@ class Region:
     def calculate_region_cost(
         self, unit_enum_map: dict, health_prorated=True, defensive_only=False
     ):
+        """
+        Calculates overall cost of region
+        @param unit_enum_map: map describing the enumerations for each unit
+        @param health_prorated: whether to prorate based on remaining health
+        @param defensive_only: whether to only consider defensive units
+        @return: returns the cost of the region
+        """
         cost = 0
         for units in self.units.values():
             for unit in units:
@@ -361,12 +380,23 @@ class Region:
         return cost
 
     def random_turret_placement(self, state: gamelib.GameState):
+        """
+        Finds random available location to place a turret
+        @param state: Game State
+        @return: random available location (x, y) coordinate
+        """
         loc = random.choice(list(self.coordinates))
         while self.grid_type[self.zero_coordinates(loc)] == -1 or self.grid_unit[self.zero_coordinates(loc)] is not None:
             loc = random.choice(list(self.coordinates))
         return loc
 
     def calculate_overall_health(self, unit_enum_map: dict, defensive_only=True):
+        """
+        Calculates overall health of the region
+        @param unit_enum_map: map describing the enumerations for each unit
+        @param defensive_only: whether or not to only look at defensive units
+        @return:
+        """
         health = 0
         for units in self.units.values():
             for unit in units:
@@ -376,32 +406,128 @@ class Region:
         return health
 
     def undefended_tiles(self):
+        """
+        Determines which tiles are undefended in the region
+        @return: list of undefended tile coordinates
+        """
         undefended = []
         for coord in self.coordinates:
             if self.damage_regions[self.zero_coordinates(coord)] == 0:
                 undefended.append(coord)
         return undefended
 
-    def calculate_region_states(self, unit_enum_map: dict, units):
-        states = {}
-        states["AVG TILE DMG"] = self.average_tile_damage()
-        states["REGION COST ALL"] = self.calculate_region_cost(unit_enum_map, defensive_only=False)
-        states["REGION COST DEF"] = self.calculate_region_cost(unit_enum_map, defensive_only=True)
-        states["OVERALL HEALTH ALL"] = self.calculate_overall_health(
+    def calculate_region_states(self, unit_enum_map: dict):
+        self.states = {}
+        self.states["AVG TILE DMG"] = self.average_tile_damage()
+        self.states["REGION COST ALL"] = self.calculate_region_cost(unit_enum_map, defensive_only=False)
+        self.states["REGION COST DEF"] = self.calculate_region_cost(unit_enum_map, defensive_only=True)
+        self.states["OVERALL HEALTH ALL"] = self.calculate_overall_health(
             unit_enum_map, defensive_only=False
         )
-        states["OVERALL HEALTH DEF"] = self.calculate_overall_health(
+        self.states["OVERALL HEALTH DEF"] = self.calculate_overall_health(
             unit_enum_map, defensive_only=True
         )
-        states["UNDEFENDED TILES"] = self.undefended_tiles()
+        self.states["UNDEFENDED TILES"] = self.undefended_tiles()
         '''
         states["SIMULATED DAMAGE"] = {
             unit: self.simulate_average_damage(unit_enum_map, unit) for unit in units
         }
         '''
-        return states
+
+    def calculate_optimal_turret_placement(self, unit_enum_map):
+        """
+        Calculates optimal placement of turret based on the current region state.
+        @param unit_enum_map: map describing the enumerations for each unit
+        @return: optimal coordinate for turret placement
+        """
+        if self.units[unit_enum_map["TURRET"]] is None:
+            return random.choice(self.edge_coordinates(self.incoming_edges[0]))
+
+        best_candidate = list(self.coordinates)[0]
+        distance_from_other_turrets = 0
+        for coord in self.coordinates:
+            if self.grid_unit[self.zero_coordinates(coord)] is not None:
+                continue
+            dist = sum(math.sqrt((turret.x - coord[0]) ** 2 + (turret.y - coord[1]) ** 2) for turret in self.units[unit_enum_map["TURRET"]])
+            if dist > distance_from_other_turrets:
+                best_candidate = coord
+        return best_candidate
+
+    def calculate_optimal_turret_upgrade(self, unit_enum_map: dict):
+        """
+        Calculates the optimal turret to upgrade based on how close it is to the edge
+        @param unit_enum_map: map describing the enumerations for each unit
+        @return: (x, y) coordinate describing the location of said turret
+        """
+        if len(self.units[unit_enum_map["TURRET"]]) == 0:
+            return None
+        best_candidate = self.units[unit_enum_map["TURRET"]][0]
+        highest_y = 0
+        highest_x = 0
+        for turret in self.units[unit_enum_map["TURRET"]]:
+            if turret.upgraded:
+                continue
+            if turret.y >= highest_y:
+                highest_y = turret.y
+                highest_x = turret.x
+        return highest_x, highest_y
+
+    def place_walls_near_turrets(self, game_state: gamelib.GameState, unit_enum_map: dict, count=1, upgrade=False):
+        """
+        Places walls near already placed turrets in the region.
+        @param game_state: Game State
+        @param unit_enum_map: map describing the enumerations for each unit
+        @param count: number of walls to place
+        @param upgrade: whether or not to upgrade the walls
+        """
+        for turret in self.units[unit_enum_map["TURRET"]]:
+            above = [turret.x, turret.y + 1]
+            right = [turret.x + 1, turret.y]
+            left = [turret.x - 1, turret.y]
+            loc = [above, right, left]
+            game_state.attempt_spawn(unit_type=unit_enum_map["WALL"], locations=loc[:count])
+            if upgrade:
+                for l in loc[:count]:
+                    if self.in_bounds(l):
+                        game_state.attempt_upgrade(locations=loc[:count])
+
+    def fortify_region_defenses(self, game_state: gamelib.GameState, unit_enum_map: dict):
+        """
+        Fortifies region defenses based on relationship between turrets and walls
+        @param game_state: Game State
+        @param unit_enum_map: map describing the enumerations for each unit
+        """
+        if game_state.turn_number > 10:
+            upgrade=True
+        else:
+            upgrade=False
+        if len(self.units[unit_enum_map["TURRET"]]) > 2 * len(self.units[unit_enum_map["WALL"]]):
+            self.place_walls_near_turrets(game_state, unit_enum_map, upgrade=upgrade)
+
+        if len(self.units[unit_enum_map["TURRET"]]) <= 1:
+            optimal = self.calculate_optimal_turret_placement(unit_enum_map)
+            if optimal is not None:
+                game_state.attempt_spawn(unit_type=unit_enum_map["TURRET"],
+                                         locations=optimal)
+        elif len(self.units[unit_enum_map["TURRET"]]) > 1:
+            if any((turret.health / turret.max_health < 0.5) for turret in self.units[unit_enum_map["TURRET"]]) and game_state.get_resource(0, 0) > 2:
+                optimal = self.calculate_optimal_turret_placement(unit_enum_map)
+                if optimal is not None:
+                    game_state.attempt_spawn(unit_type=unit_enum_map["TURRET"],
+                                         locations=optimal)
+            elif game_state.get_resource(0, 0) > 4:
+                optimal = self.calculate_optimal_turret_upgrade(unit_enum_map)
+                if not optimal:
+                    game_state.attempt_upgrade(unit_type=unit_enum_map["TURRET"], locations=optimal)
 
     def point_inside_polygon(self, x, y, poly):
+        """
+        Checks to see if an x,y coordinate is inside of a polygon
+        @param x: x coordinate
+        @param y: coordinate
+        @param poly: list of vertices representing the convex polygon
+        @return: whether the point is in the polygon
+        """
         n = len(poly)
         inside = False
 

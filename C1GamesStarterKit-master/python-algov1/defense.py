@@ -26,7 +26,6 @@ class Defense:
             unit_enum_map["FACTORY"]: set(),
             unit_enum_map["WALL"]: set(),
         }
-        self.states = {}
 
     def create_our_regions(self, unit_enum_map: dict):
         self.regions[0] = Region(
@@ -223,7 +222,7 @@ class Defense:
             # iterate through the units to add to the overall game state
             # we use a set because there is overlap of regions, we don't want to double count units
             # find the states of region i
-            self.states[i] = region.calculate_region_states(unit_enum_map, units)
+            region.calculate_region_states(unit_enum_map, units)
         for x in range(game_state.ARENA_SIZE):
             for y in range(game_state.HALF_ARENA):
                 if not game_state.game_map.in_arena_bounds((x, y)):
@@ -244,7 +243,7 @@ class Defense:
         Updates defense tiles
         @return: list of undefended tiles
         """
-        return {i: self.states[i]["UNDEFENDED TILES"] for i in range(self.region_count)}
+        return {i: self.regions[i].states["UNDEFENDED TILES"] for i in range(self.region_count)}
 
     def calculate_total_cost(
         self, unit_enum_map: dict, defensive_only=True, health_prorated=True
@@ -268,3 +267,67 @@ class Defense:
                 else:
                     cost += unit.cost[0]
         return cost
+
+    def weakest_region(self, unit_enum_map, criteria="HEALTH", regions_to_consider=range(4)):
+        """
+        Finds weakest region based on the criteria specified
+        @param unit_enum_map: map describing the enumerations for each unit
+        @param criteria: WORKS AS FOLLOWS:
+                         HEALTH - Considers which region has the lowest overall health of defensive buildings
+                         UNDEFENDED TILES - Considers which region has the most undefended tiles
+        @param regions_to_consider: which regions to consider
+        @return: Region ID.
+        """
+        if criteria == "HEALTH":
+            min_health = 1000000000
+            min_id = 0
+            for reg_id in regions_to_consider:
+                if self.regions[reg_id].states["OVERALL HEALTH DEF"] < min_health:
+                    min_id = reg_id
+                    min_health = self.regions[reg_id].states["OVERALL HEALTH DEF"]
+            return min_id
+        if criteria == "UNDEFENDED TILES":
+            undefended_tiles_max = 0
+            worst_id = 0
+            for reg_id in regions_to_consider:
+                if len(self.regions[reg_id].states["UNDEFENDED TILES"]) > undefended_tiles_max:
+                    undefended_tiles_max = len(self.regions[reg_id].states["UNDEFENDED TILES"])
+                    worst_id = reg_id
+            return worst_id
+        if criteria == "DEFENSIVE POWER":
+            min_defensive_power = 100000000
+            min_id = 0
+            for reg_id in regions_to_consider:
+                region_wall_power = 0
+                region_turret_power = 0
+                for units in self.regions[reg_id].units.values():
+                    for unit in units:
+                        if unit.unit_type == unit_enum_map["WALL"]:
+                            region_wall_power += unit.cost[0] * ( unit.health / unit.max_health )
+                        elif unit.unit_type == unit_enum_map["TURRET"]:
+                            region_turret_power += unit.cost[0] * (unit.health / unit.max_health)
+                if min(region_turret_power, region_wall_power) < min_defensive_power:
+                    min_id = reg_id
+                    min_defensive_power = min(region_turret_power, region_wall_power)
+            return min_id
+
+    def fortify_defenses(self, game_state, unit_enum_map, criteria="DEFENSIVE POWER"):
+        """
+        Fortifies defenses by finding the weakest region by our criteria
+        and fortifying based on the Region fortify_region_defenses subroutine
+        @param game_state: Game State to pass in
+        @param criteria:
+        """
+        count = 0
+        while game_state.get_resource(0, 0) >= 4 and count < 30:
+            if game_state.turn_number > 6:
+                weakest_region = self.weakest_region(unit_enum_map, criteria=criteria, regions_to_consider=range(6))
+            else:
+                weakest_region = self.weakest_region(unit_enum_map, criteria=criteria, regions_to_consider=range(4))
+            gamelib.util.debug_write("WEAKEST REGION AT COUNT: " + str(count) + " is: " + str(weakest_region))
+            self.regions[weakest_region].fortify_region_defenses(game_state, unit_enum_map)
+            # IF WE HAVE TIME REFACTOR THIS TO BE MORE EFFICIENT BY UPDATING ONLY ON WHAT CHANGED
+            # RIGHT NOW I THINK WE HAVE THE TIME TO SPARE THOUGH
+            # IMPORTANT TO NOT NEGLECT THOUGH IF WE RUN INTO COMPUTATIONAL TIME CONSTRAINTS
+            self.update_defense(unit_enum_map, game_state)
+            count += 1
