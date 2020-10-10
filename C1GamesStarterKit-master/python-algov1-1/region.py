@@ -9,7 +9,7 @@ import queue
 class Region:
     # CONSTANTS
 
-    MIN_TURN_UPGRADE = 8  # Only start upgrading after this turn
+    MIN_TURN_UPGRADE = 5  # Only start upgrading after this turn
     MAX_TURRETS = 5
 
     def __init__(
@@ -203,6 +203,12 @@ class Region:
         unit_enum_map (dict): Maps NAME to unit enum
         @param map: map to base updates off of
         """
+
+        self.units = {
+            unit_enum_map["TURRET"]: [],
+            unit_enum_map["FACTORY"]: [],
+            unit_enum_map["WALL"]: [],
+        }
 
         # iterate through each valid tile inside the triangle to see what structure is in it
         for coord in self.coordinates:
@@ -570,9 +576,8 @@ class Region:
         else:
             upgrade = False
 
-        if len(self.units[unit_enum_map["TURRET"]]) > 2 * len(
-            self.units[unit_enum_map["WALL"]]
-        ):
+        gamelib.util.debug_write("TURRET COUNT: " + str(self.units[unit_enum_map["TURRET"]]))
+        if len(self.units[unit_enum_map["TURRET"]]) > 2 * len(self.units[unit_enum_map["WALL"]]):
             gamelib.util.debug_write("LESS TURRETS THAN WALLS")
             # Place more walls near turrets
             self.place_walls_near_turrets(game_state, unit_enum_map, upgrade=upgrade)
@@ -580,11 +585,12 @@ class Region:
         if len(self.units[unit_enum_map["TURRET"]]) <= 1:
             gamelib.debug_write("LESS THAN 2 TURRETS")
             optimal = self.calculate_optimal_turret_placement(unit_enum_map)
+            gamelib.util.debug_write("OPTIMAL_TURRET PLACEMENT: " + str(optimal))
             game_state.attempt_spawn(
                 unit_type=unit_enum_map["TURRET"], locations=optimal
             )
-        elif self.MAX_TURRETS > len(self.units[unit_enum_map["TURRET"]]) > 1:
-
+        elif 1 < len(self.units[unit_enum_map["TURRET"]]) < self.MAX_TURRETS:
+            gamelib.util.debug_write("MORE THAN ONE TURRET")
             if (
                 any(
                     (turret.health / turret.max_health < 0.5)
@@ -599,6 +605,7 @@ class Region:
                     unit_type=unit_enum_map["TURRET"], locations=optimal
                 )
             elif game_state.get_resource(0, 0) >= 4:
+                gamelib.debug_write("TRYING TO UPGRADE")
                 optimal = self.calculate_optimal_turret_upgrade(unit_enum_map)
                 if not optimal:
                     game_state.attempt_upgrade(
@@ -609,7 +616,8 @@ class Region:
                     game_state.attempt_spawn(
                         unit_type=unit_enum_map["TURRET"], locations=optimal
                     )
-        else:
+        elif len(self.units[unit_enum_map["TURRET"]]) >= self.MAX_TURRETS:
+            gamelib.debug_write("MORE THAN 5 TURRETS")
             optimal = self.calculate_optimal_turret_upgrade(unit_enum_map)
             if not optimal:
                 game_state.attempt_upgrade(

@@ -108,6 +108,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         unit deployments, and transmitting your intended deployments to the
         game engine.
         """
+        self.scored_on_locations = []
         game_state = gamelib.GameState(self.config, turn_state)
         gamelib.debug_write(
             "Performing turn {} of your custom algo strategy".format(
@@ -160,7 +161,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Refresh scored on locations & enemy unit breaches
         # scored_on_locations reset to empty before processing
         self.on_action_frame(turn_state)
-
+        gamelib.util.debug_write(self.scored_on_locations)
         # TODO - Have they gotten far in our base?
         if not self.scored_on_locations:
             # BASE CASE (NORMAL)
@@ -260,6 +261,7 @@ class AlgoStrategy(gamelib.AlgoCore):
                 self.our_defense.regions[region].fortify_region_defenses(
                     game_state, self.UNIT_ENUM_MAP
                 )
+                gamelib.util.debug_write("FORTIFYING ATTACKED REGION: " + str(region))
 
             # Factory Impact Diff deprioritized
             self.resolve_factory_impact_diff(game_state, deprioritize=True)
@@ -475,7 +477,6 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # Record locations we got scored on
         breaches = events["breach"]
-        self.scored_on_locations = []
         for breach in breaches:
             location = breach[0]
             unit_owner_self = True if breach[4] == 1 else False
