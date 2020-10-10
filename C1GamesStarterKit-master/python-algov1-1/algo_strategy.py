@@ -203,15 +203,6 @@ class AlgoStrategy(gamelib.AlgoCore):
                     length = wall_y_coord
                     demolisher_x_coord = wall_x_coord + 1
                     demolisher_y_coord = wall_y_coord - 1
-                    path = game_state.find_path_to_edge(
-                        (demolisher_x_coord, demolisher_y_coord)
-                    )
-                    while path is None or len(path) < 3:
-                        demolisher_x_coord += 1
-                        demolisher_y_coord -= 1
-                        path = game_state.find_path_to_edge(
-                            (demolisher_x_coord, demolisher_y_coord)
-                        )
                 else:
                     # Concentration on RIGHT HALF
                     wall_x_coord = 27 - (13 - (y_coord - 3))
@@ -219,15 +210,6 @@ class AlgoStrategy(gamelib.AlgoCore):
                     length = wall_y_coord
                     demolisher_x_coord = wall_x_coord - 1
                     demolisher_y_coord = wall_y_coord - 1
-                    path = game_state.find_path_to_edge(
-                        (demolisher_x_coord, demolisher_y_coord)
-                    )
-                    while path is None or len(path) < 3:
-                        demolisher_x_coord -= 1
-                        demolisher_y_coord -= 1
-                        path = game_state.find_path_to_edge(
-                            (demolisher_x_coord, demolisher_y_coord)
-                        )
 
                 num_demolishers = math.floor(game_state.number_affordable(DEMOLISHER))
                 OffensiveDemolisherLine().build_demolisher_line(
