@@ -6,6 +6,10 @@ import math
 
 
 class Region:
+    # CONSTANTS
+
+    MIN_TURN_UPGRADE = 8  # Only start upgrading after this turn
+
     def __init__(
         self,
         unit_enum_map: dict,
@@ -449,6 +453,7 @@ class Region:
         undefended = []
         for coord in self.coordinates:
             if self.damage_regions[self.zero_coordinates(coord)] == 0:
+                # This coord is undefended by a turret
                 undefended.append(coord)
 
         return undefended
@@ -469,9 +474,9 @@ class Region:
             unit_enum_map, defensive_only=True
         )
         self.states["UNDEFENDED TILES"] = self.undefended_tiles()
-        self.states["SIMULATED DAMAGE"] = {
-            unit: self.simulate_average_damage(unit_enum_map, unit) for unit in units
-        }
+        # self.states["SIMULATED DAMAGE"] = {
+        #     unit: self.simulate_average_damage(unit_enum_map, unit) for unit in units
+        # }
 
     def calculate_optimal_turret_placement(self, unit_enum_map: dict) -> (int, int):
         """
@@ -479,14 +484,19 @@ class Region:
         @param unit_enum_map: map describing the enumerations for each unit
         @return: optimal coordinate for turret placement
         """
+
         if self.units[unit_enum_map["TURRET"]] is None:
+            # If no pre-existing turrets, random
             return random.choice(self.edge_coordinates(self.incoming_edges[0]))
 
+        # Otherwise, find location maximizing distance from all other turrets
         best_candidate = list(self.coordinates)[0]
         distance_from_other_turrets = 0
         for coord in self.coordinates:
             if self.grid_unit[self.zero_coordinates(coord)] is not None:
                 continue
+
+            # Maxmize distanced to ALL turrets
             dist = sum(
                 math.sqrt((turret.x - coord[0]) ** 2 + (turret.y - coord[1]) ** 2)
                 for turret in self.units[unit_enum_map["TURRET"]]
@@ -502,6 +512,8 @@ class Region:
         @param unit_enum_map: map describing the enumerations for each unit
         @return: (x, y) coordinate describing the location of said turret
         """
+
+        # Find turret closest to the front
 
         if len(self.units[unit_enum_map["TURRET"]]) == 0:
             return None
@@ -551,7 +563,7 @@ class Region:
         @param unit_enum_map: map describing the enumerations for each unit
         """
 
-        if game_state.turn_number > 10:
+        if game_state.turn_number >= self.MIN_TURN_UPGRADE:
             upgrade = True
         else:
             upgrade = False
@@ -559,28 +571,28 @@ class Region:
         if len(self.units[unit_enum_map["TURRET"]]) > 2 * len(
             self.units[unit_enum_map["WALL"]]
         ):
+            # Place more walls near turrets
             self.place_walls_near_turrets(game_state, unit_enum_map, upgrade=upgrade)
 
         if len(self.units[unit_enum_map["TURRET"]]) <= 1:
             optimal = self.calculate_optimal_turret_placement(unit_enum_map)
-            if optimal is not None:
-                game_state.attempt_spawn(
-                    unit_type=unit_enum_map["TURRET"], locations=optimal
-                )
+            game_state.attempt_spawn(
+                unit_type=unit_enum_map["TURRET"], locations=optimal
+            )
         elif len(self.units[unit_enum_map["TURRET"]]) > 1:
             if (
                 any(
                     (turret.health / turret.max_health < 0.5)
                     for turret in self.units[unit_enum_map["TURRET"]]
                 )
-                and game_state.get_resource(0, 0) > 2
+                and game_state.get_resource(0, 0) >= 2
             ):
+                # Could have many turrets but atleast 1 is low health
                 optimal = self.calculate_optimal_turret_placement(unit_enum_map)
-                if optimal is not None:
-                    game_state.attempt_spawn(
-                        unit_type=unit_enum_map["TURRET"], locations=optimal
-                    )
-            elif game_state.get_resource(0, 0) > 4:
+                game_state.attempt_spawn(
+                    unit_type=unit_enum_map["TURRET"], locations=optimal
+                )
+            elif game_state.get_resource(0, 0) >= 4:
                 optimal = self.calculate_optimal_turret_upgrade(unit_enum_map)
                 if not optimal:
                     game_state.attempt_upgrade(

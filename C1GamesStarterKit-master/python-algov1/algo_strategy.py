@@ -127,6 +127,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.their_defense.update_defense(self.UNIT_ENUM_MAP, game_state)
 
         # Refresh units list for both players
+        # TODO - Refactor using Defense - Use the .units attribute from there
         self.units = get_structure_dict(game_state, self.UNIT_ENUM_MAP, player=0)
         self.enemy_units = get_structure_dict(game_state, self.UNIT_ENUM_MAP, player=1)
 
@@ -183,6 +184,7 @@ class AlgoStrategy(gamelib.AlgoCore):
                 )
 
                 # TODO - Target the specific area (?)
+                # TODO - Find line with most enemy turrets (1st or 2nd) & place walls such that demolishers can hit that but don't get hit themselves
                 row = 7  # Place near middle of y-coord
                 x_left_bound = 13 - row
                 x_right_bound = 14 + row
@@ -245,7 +247,7 @@ class AlgoStrategy(gamelib.AlgoCore):
             if deprioritize
             else self.NORM_FACTORY_SP_PERCENT * possible_factories
         )
-        actual_factories_int = math.floor(actual_factories)
+        actual_factories_int = math.ceil(actual_factories)
 
         num = 0  # Counter: Don't allow to exceed actual_factories_int
 
@@ -310,6 +312,8 @@ class AlgoStrategy(gamelib.AlgoCore):
             game_state (GameState): The current GameState object
         """
 
+        # TODO - If past turrets destroyed, replace
+
         # Place final turret
         game_state.attempt_spawn(TURRET, [16, 12])
         # Save rest of SP for next round to buy Factory
@@ -324,6 +328,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         Args:
             game_state (GameState): The current GameState object
         """
+
+        # TODO - If past turrets destroyed, replace
 
         # Build 2nd Factory
         game_state.attempt_spawn(FACTORY, [14, 1])
@@ -350,7 +356,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         as shown in the on_action_frame function
         """
 
-        # TODO Check this!
         # TODO - Currently unused!
 
         self.on_action_frame(turn_state)
@@ -418,6 +423,8 @@ class AlgoStrategy(gamelib.AlgoCore):
                     region = self.our_defense.get_region((unit[0], unit[1]))
                     if region != -1:
                         self.regions_attacked[region] += 1
+
+        # TODO - Maybe use this
 
         # Record locations we got scored on
         breaches = events["breach"]

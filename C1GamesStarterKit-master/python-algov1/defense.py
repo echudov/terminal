@@ -4,6 +4,12 @@ from region import Region
 
 
 class Defense:
+    # CONSTANTS
+
+    # Relative weight (lower means more emphasis on turrets)
+    TURRET_TO_WALL_RATIO = 0.75
+    MIN_TURN_TO_FORTIFY_BACK_REGIONS = 5  # Used in fortify_defenses
+
     def __init__(self, unit_enum_map: dict, player_id: int):
         """
         Initializes defense with multiple predetermined regions.
@@ -336,9 +342,12 @@ class Defense:
                                 unit.health / unit.max_health
                             )
                         elif unit.unit_type == unit_enum_map["TURRET"]:
-                            region_turret_power += unit.cost[0] * (
-                                unit.health / unit.max_health
+                            region_turret_power += (
+                                unit.cost[0]
+                                * (unit.health / unit.max_health)
+                                * self.TURRET_TO_WALL_RATIO
                             )
+
                 if min(region_turret_power, region_wall_power) < min_defensive_power:
                     min_id = reg_id
                     min_defensive_power = min(region_turret_power, region_wall_power)
@@ -358,9 +367,12 @@ class Defense:
         @param criteria:
         """
 
+        # TODO - Later remove count
+
         count = 0
         while game_state.get_resource(0, 0) >= 4 and count < 30:
-            if game_state.turn_number > 6:
+            if game_state.turn_number > self.MIN_TURN_TO_FORTIFY_BACK_REGIONS:
+                # Check the back regions too (fortify factories, etc.)
                 weakest_region = self.weakest_region(
                     unit_enum_map, criteria=criteria, regions_to_consider=range(6)
                 )
@@ -370,7 +382,7 @@ class Defense:
                 )
 
             gamelib.util.debug_write(
-                "WEAKEST REGION AT COUNT: " + str(count) + " is: " + str(weakest_region)
+                "WEAKEST REGION AT COUNT: " + str(count) + " is: " + str(weakest_region) + "; CURRENT SP IS: " + str(game_state.get_resource(0, 0))
             )
             self.regions[weakest_region].fortify_region_defenses(
                 game_state, unit_enum_map

@@ -132,6 +132,8 @@ class OffensiveDemolisherLine:
                 unit_enum_map["DEMOLISHER"], [dem_x, dem_y]
             )
 
+        # TODO - Delete walls that allow us to enter regions
+
         if wall_num == 0 or dem_num == 0:
             return False
 
