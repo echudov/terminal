@@ -17,7 +17,7 @@ class OffensiveInterceptorSpam:
         game_state: GameState,
         unit_enum_map: dict,
         num_interceptors: int,
-        locations: [(int, int)] or [[[int]]],
+        locations: [(int, int)] or [[int]],
     ) -> int:
         """Builds X Interceptors at EACH of the MULTIPLE given locations (stacked)
 
@@ -71,7 +71,7 @@ class OffensiveInterceptorSpam:
         self,
         game_state: GameState,
         unit_enum_map: dict,
-        location: (int, int) or [[int]],
+        location: (int, int) or [int],
     ) -> bool:
         """Private helper to place an interceptor at a given location
 
@@ -101,8 +101,8 @@ class OffensiveDemolisherLine:
         unit_enum_map: dict,
         num_demolishers: int,
         num_walls: int,
-        wall_location: (int, int) or [int, int],
-        dem_location: (int, int) or [int, int],
+        wall_location: (int, int) or [int],
+        dem_location: (int, int) or [int],
         right: bool = True,
     ) -> bool:
         """Builds a line of walls starting at the given location and stacked demolishers 1 tile back
@@ -117,7 +117,7 @@ class OffensiveDemolisherLine:
         """
 
         # Build a full line towards right of location (might overflow but fine)
-        DefensiveWallStrat().build_h_wall_line(
+        placed_wall_locs = DefensiveWallStrat().build_h_wall_line(
             game_state, unit_enum_map, wall_location, num_walls, right=right
         )
 
@@ -125,4 +125,6 @@ class OffensiveDemolisherLine:
         for _ in range(game_state.number_affordable(unit_enum_map["DEMOLISHER"])):
             game_state.attempt_spawn(unit_enum_map["DEMOLISHER"], dem_location)
 
-        # TODO - Delete walls that allow us to enter regions
+        # Mark all recently placed walls for deletion to not block our units/structures later
+        for placed_wall in placed_wall_locs:
+            game_state.attempt_remove(placed_wall)
