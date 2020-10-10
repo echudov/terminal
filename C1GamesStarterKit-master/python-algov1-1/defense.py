@@ -9,10 +9,10 @@ class Defense:
 
     # Relative weight (lower means more emphasis on turrets)
     TURRET_TO_WALL_RATIO = 0.75
-    MIN_TURN_TO_FORTIFY_BACK_REGIONS = 7  # Used in fortify_defenses
-    MIN_TURN_REBUILD = 13
-    PERCENT_TO_REBUILD_TURRET = 0.5
-    PERCENT_TO_REBUILD_WALL = 0.5
+    MIN_TURN_TO_FORTIFY_BACK_REGIONS = 4  # Used in fortify_defenses
+    MIN_TURN_REBUILD = 13  # Min turn to start re-building low-health structures
+    PERCENT_TO_REBUILD_TURRET = 0.5  # Threshold for above
+    PERCENT_TO_REBUILD_WALL = 0.5  # Threshold for above
 
     def __init__(self, unit_enum_map: dict, player_id: int):
         """
@@ -243,7 +243,10 @@ class Defense:
             region.calculate_region_states(unit_enum_map, units)
 
         for x in range(game_state.ARENA_SIZE):
-            for y in range(game_state.HALF_ARENA * self.player_id, game_state.HALF_ARENA * (1 + self.player_id)):
+            for y in range(
+                game_state.HALF_ARENA * self.player_id,
+                game_state.HALF_ARENA * (1 + self.player_id),
+            ):
                 if not game_state.game_map.in_arena_bounds((x, y)):
                     continue
                 unit = game_state.game_map[x, y]
@@ -365,7 +368,7 @@ class Defense:
         game_state: gamelib.GameState,
         unit_enum_map: dict,
         criteria: str = "DEFENSIVE POWER",
-        sp_left: int = 3
+        sp_left: int = 3,
     ):
         """
         Fortifies defenses by finding the weakest region by our criteria
@@ -374,7 +377,7 @@ class Defense:
         @param game_state: Game State to pass in
         @param criteria: Criteria to evaluate weakest region on
         """
-        '''
+        """
         # TODO - Later remove count
         while not self.turrets_to_rebuild.empty() and game_state.get_resource(0, 0) >= 4:
             elem = self.turrets_to_rebuild.get()
@@ -401,7 +404,7 @@ class Defense:
                 if wall.health < self.PERCENT_TO_REBUILD_WALL * wall.max_health:
                     self.walls_to_rebuild.put({"COORD": [wall.x, wall.y], "UPGRADE": wall.upgraded})
                     game_state.attempt_remove([wall.x, wall.y])
-        '''
+        """
         count = 0
         while game_state.get_resource(0, 0) > sp_left and count < 5:
             if game_state.turn_number > self.MIN_TURN_TO_FORTIFY_BACK_REGIONS:
@@ -415,7 +418,12 @@ class Defense:
                 )
 
             gamelib.util.debug_write(
-                "WEAKEST REGION AT COUNT: " + str(count) + " is: " + str(weakest_region) + "; CURRENT SP IS: " + str(game_state.get_resource(0, 0))
+                "WEAKEST REGION AT COUNT: "
+                + str(count)
+                + " is: "
+                + str(weakest_region)
+                + "; CURRENT SP IS: "
+                + str(game_state.get_resource(0, 0))
             )
             self.regions[weakest_region].fortify_region_defenses(
                 game_state, unit_enum_map

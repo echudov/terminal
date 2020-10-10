@@ -120,14 +120,18 @@ class OffensiveDemolisherLine:
         placed_wall_locs = DefensiveWallStrat().build_h_wall_line(
             game_state, unit_enum_map, wall_location, num_walls, right=right
         )
+
+        # Offset coordinates one down or one left/right depending on where it places walls
         path = game_state.find_path_to_edge(dem_location)
         while path is None or len(path) < 3:
             if right:
-                dem_location[1] += 1
+                dem_location[0] += 1
             else:
-                dem_location[1] -= 1
-            dem_location -= 1
+                dem_location[0] -= 1
+
+            dem_location[1] -= 1
             path = game_state.find_path_to_edge(dem_location)
+
         # Build as many demolishers as possible at dem_location
         for _ in range(game_state.number_affordable(unit_enum_map["DEMOLISHER"])):
             game_state.attempt_spawn(unit_enum_map["DEMOLISHER"], dem_location)
