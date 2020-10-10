@@ -156,7 +156,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         if game_state.turn_number < 3:
             self.starting_strategy(game_state)
             return
-
+        self.scored_on_locations = []
         # Refresh scored on locations & enemy unit breaches
         # scored_on_locations reset to empty before processing
         self.on_action_frame(turn_state)
@@ -250,7 +250,7 @@ class AlgoStrategy(gamelib.AlgoCore):
             # Fortify regions scored on locations
             regions = set()
             for loc in set(self.scored_on_locations):
-                if loc[0] > 12:
+                if loc[1] > 10:
                     for i in range(4):
                         game_state.attempt_spawn(self.UNIT_ENUM_MAP["WALL"], locations=[[i, 13], [27 - i, 13]])
                 for potential_turret in game_state.game_map.get_locations_in_range(loc, radius=1.5):
@@ -448,7 +448,6 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # Record locations we got scored on
         breaches = events["breach"]
-        self.scored_on_locations = []
         for breach in breaches:
             location = breach[0]
             unit_owner_self = True if breach[4] == 1 else False
