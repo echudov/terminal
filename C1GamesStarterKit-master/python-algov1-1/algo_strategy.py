@@ -55,7 +55,6 @@ Advanced strategy tips:
 class AlgoStrategy(gamelib.AlgoCore):
     # CONSTANTS
 
-    RESET_ATTACKED_REGIONS_TURNS = 3  # Turns after which our attacked regions is reset
     # SP fraction dedicated to factories during normal times
     NORM_FACTORY_SP_PERCENT = 0.5
     # SP fraction dedicated to factories during bad times
@@ -132,11 +131,12 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.units = self.our_defense.units
         self.enemy_units = self.their_defense.units
 
+        # Refresh scored on locations & enemy unit breaches
+        self.scored_on_locations = []
+        self.on_action_frame(turn_state)
+
         # Perform moves - MAIN ENTRY POINT
         self.choose_and_execute_strategy(game_state, turn_state)
-
-        # Refresh regions attacked, if applicable
-        # NOTE: regions_attacked and scored_on_locations lists set/updated in on_action_frame
 
         game_state.submit_turn()  # Must be called at the end
 
@@ -156,10 +156,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         if game_state.turn_number < 3:
             self.starting_strategy(game_state)
             return
-        self.scored_on_locations = []
-        # Refresh scored on locations & enemy unit breaches
-        # scored_on_locations reset to empty before processing
-        self.on_action_frame(turn_state)
 
         if not self.scored_on_locations:
             # BASE CASE (NORMAL)
@@ -248,16 +244,29 @@ class AlgoStrategy(gamelib.AlgoCore):
             # EMERGENCY CASE - Fortify immediately
 
             # Fortify regions scored on locations
-            regions = set()
             for loc in set(self.scored_on_locations):
                 if loc[1] > 10:
+                    # If we got scored on at top-ish edges, add walls there
                     for i in range(4):
-                        game_state.attempt_spawn(self.UNIT_ENUM_MAP["WALL"], locations=[[i, 13], [27 - i, 13]])
-                for potential_turret in game_state.game_map.get_locations_in_range(loc, radius=1.5):
-                    if game_state.can_spawn(self.UNIT_ENUM_MAP["TURRET"], location=potential_turret):
-                        game_state.attempt_spawn(self.UNIT_ENUM_MAP["TURRET"], locations=potential_turret)
-                        game_state.attempt_upgrade(self.UNIT_ENUM_MAP["TURRET"], locations=potential_turret)
+                        game_state.attempt_spawn(
+                            self.UNIT_ENUM_MAP["WALL"],
+                            locations=[[i, 13], [27 - i, 13]],
+                        )
+
+                for potential_turret in game_state.game_map.get_locations_in_range(
+                    loc, radius=1.5
+                ):
+                    if game_state.can_spawn(
+                        self.UNIT_ENUM_MAP["TURRET"], location=potential_turret
+                    ):
+                        game_state.attempt_spawn(
+                            self.UNIT_ENUM_MAP["TURRET"], locations=potential_turret
+                        )
+                        game_state.attempt_upgrade(
+                            self.UNIT_ENUM_MAP["TURRET"], locations=potential_turret
+                        )
                         break
+
             # Factory Impact Diff deprioritized
             self.resolve_factory_impact_diff(game_state, deprioritize=True)
 
@@ -443,8 +452,6 @@ class AlgoStrategy(gamelib.AlgoCore):
                     region = self.our_defense.get_region((unit[0], unit[1]))
                     if region != -1:
                         self.regions_attacked[region] += 1
-
-        # TODO - Maybe use this
 
         # Record locations we got scored on
         breaches = events["breach"]
