@@ -48,7 +48,7 @@ class DefensiveWallStrat:
 
             for loc in locations:
                 if game_state.can_spawn(unit_enum_map["WALL"], loc):
-                    game_state.attempt_spawn(unit_enum_map["WALL"], loc)
+                    succ = game_state.attempt_spawn(unit_enum_map["WALL"], loc)
                     if succ == 1:
                         wall_placed_locs.append(loc)
 
