@@ -1,7 +1,14 @@
 """This file contains functions to help determing WHERE to place a new unit"""
 
+from collections import Counter
+
 from gamelib.game_state import GameState
 from gamelib.game_map import GameMap
+
+# CONSTANTS
+
+# Fraction of turret in first 3 rows to be considered concentrated
+MIN_FRONT_TURRET_DENSITY = 0.6
 
 
 def factory_location_helper(game_state: GameState) -> (int, int):
@@ -32,3 +39,53 @@ def factory_location_helper(game_state: GameState) -> (int, int):
                 return location
 
     return None
+
+
+def demolisher_location_helper(
+    game_state: GameState, unit_enum_map: dict, enemy_units: dict
+) -> (int, bool):
+    """Returns a location to stack demolishers to inflict the most damage on the enemy's frontline structures. Returns None if front 3 rows not concentrated.
+
+    Args:
+        game_state (GameState): The current game state object
+        unit_enum_map (dict): The unit enum dict
+        enemy_units (dict): Dict of enemy's units mapping type to set of those Units
+
+    Returns:
+        location (int, bool): Y-coord and True if left half more concentrated, else False. Or None if not concentrated
+    """
+
+    # Find the row (y-coord) with highest number of turrets
+    their_turrets = enemy_units[unit_enum_map["TURRET"]]
+    y_coords = Counter()  # Maps point y-coord to count
+
+    for turret in their_turrets:
+        if turret.y <= 16:
+            # Only count if within front 3 rows
+            y_coords.update({turret.y: 1})
+
+    if len(y_coords.elements()) < MIN_FRONT_TURRET_DENSITY * len(their_turrets):
+        return None  # Their front 3 rows are not that concentrated
+    highest_concentration_y = y_coords.most_common(1)
+
+    # Start of their halves in middle
+
+    # Find the left/right half with highest concentration
+    left_right_half_counter = Counter()
+    their_turrets_x_coord = [
+        turret.x for turret in their_turrets if turret.y == highest_concentration_y
+    ]
+
+    # Start at THEIR most concentrated row
+    x_left_bound = 13 - highest_concentration_y
+    x_right_bound = 14 + highest_concentration_y
+    for x in range(x_left_bound, x_right_bound + 1):
+        if x <= 13 and x in their_turrets_x_coord:
+            left_right_half_counter.update({"LEFT": 1})
+        elif x >= 14 and x in their_turrets_x_coord:
+            left_right_half_counter.update({"RIGHT": 1})
+
+    most_conc_half = left_right_half_counter.most_common(1)[0]
+    left_half_more_conc = True if most_conc_half == "LEFT" else False
+
+    return (highest_concentration_y, left_half_more_conc)

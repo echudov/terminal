@@ -100,7 +100,8 @@ class OffensiveDemolisherLine:
         game_state: GameState,
         unit_enum_map: dict,
         num_demolishers: int,
-        location: (int, int) or [[int]],
+        location: (int, int) or [int],
+        right: bool = True,
     ) -> bool:
         """Builds a line of walls starting at the given location and stacked demolishers 1 tile back
 
@@ -109,15 +110,16 @@ class OffensiveDemolisherLine:
             unit_enum_map (dict): Maps NAME to unit enum
             num_demolishers (int): How many demolishers
             location (int, int) or [int]: The (x, y) or [x, y] coordinate to place them at
+            right (bool): Whether to build the walls towards the right (or left)
 
         Returns:
             bool (int): Whether this strategy was successfully executed
         """
 
-        # Build a full line towards right of location (might overflow but fine)
+        # Build a full line towards direction of location until end
         wall_num = 0
         wall_num = DefensiveWallStrat().build_h_wall_line(
-            game_state, unit_enum_map, location, game_state.ARENA_SIZE, right=True
+            game_state, unit_enum_map, location, game_state.ARENA_SIZE, right=right
         )
 
         # Build demolishers 1 tile behind

@@ -20,7 +20,7 @@ from defensive_building_functions import (
     DefensiveTurretWallStrat,
 )
 
-from building_function_helper import factory_location_helper
+from building_function_helper import factory_location_helper, demolisher_location_helper
 
 from defense import Defense
 from region import Region
@@ -176,23 +176,31 @@ class AlgoStrategy(gamelib.AlgoCore):
             # Keep upgrading/building factories (max 50% of SP)
             self.resolve_factory_impact_diff(game_state)
 
-            # TODO - Do they have many structures near their front?
-            concentrated_frontal_structures = True
-            if concentrated_frontal_structures:
-                num_demolishers = math.floor(
-                    game_state.number_affordable(DEMOLISHER) / 2
-                )
+            # Do they have many structures near their front?
+            concentrated_frontal_area = demolisher_location_helper(
+                game_state, self.UNIT_ENUM_MAP, self.their_defense.units
+            )
+            if concentrated_frontal_area is not None:
+                num_demolishers = math.floor(game_state.number_affordable(DEMOLISHER))
 
-                # TODO - Target the specific area (?)
-                # TODO - Find line with most enemy turrets (1st or 2nd) & place walls such that demolishers can hit that but don't get hit themselves
-                row = 7  # Place near middle of y-coord
-                x_left_bound = 13 - row
-                x_right_bound = 14 + row
+                y_coord = concentrated_frontal_area[0]
+                x_half = concentrated_frontal_area[1]  # if True, LEFT, else RIGHT
+
+                # Place demolishers such that they are JUST far enough to target y_coord
+                # Range is 4.5
+                if x_half:
+                    # LEFT HALF - Place demolishers on right half
+                    x_coord = 13 + y_coord
+                else:
+                    # RIGHT HALF - Place demolishers on left half
+                    x_coord = 13 - y_coord
+
+                # TODO - Only send in 1 location - stack there
                 OffensiveDemolisherLine().build_demolisher_line(
                     game_state,
                     self.UNIT_ENUM_MAP,
                     num_demolishers,
-                    [[x_left_bound, row], [x_right_bound, row]],
+                    [x_coord, y_coord],
                 )
             else:
                 num_interceptors = math.floor(
@@ -200,6 +208,7 @@ class AlgoStrategy(gamelib.AlgoCore):
                 )
 
                 # TODO - Find their least-defended region and target
+
                 row = 7  # Place near middle of y-coord
                 x_left_bound = 13 - row
                 x_right_bound = 14 + row
