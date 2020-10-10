@@ -104,7 +104,7 @@ class OffensiveDemolisherLine:
         num_demolishers: int,
         location: (int, int) or [[int]],
     ) -> bool:
-        """Builds a line of walls starting at the given location and evenly-spaced demolishers 1 tile back
+        """Builds a line of walls starting at the given location and stacked demolishers 1 tile back
 
         Args:
             game_state (GameState): The current GameState object
@@ -123,25 +123,16 @@ class OffensiveDemolisherLine:
         )
 
         # Build demolishers 1 tile behind
-        dem_x = location[0]
         dem_y = location[1] - 1
+        dem_x = 14 + dem_y  # Start from the right-most possible place for this row
+        while not game_state.can_spawn(unit_enum_map["DEMOLISHER"], [dem_x, dem_y]):
+            dem_x -= 1  # Find a suitable place to stack (iteratively go left)
 
-        x_places = 2 + (2 * dem_y)  # Number of x-tiles
-        dem_loc_offset = x_places / num_demolishers  # Space between each demolisher
-        num_locs = x_places / dem_loc_offset  # num of locs to place at least 1 dem at
-
-        num_dem_per_loc = num_demolishers / num_locs
         dem_num = 0
-        for i in range(num_locs):
-            x = dem_x + (i * dem_loc_offset)
-            y = dem_y
-
-            if game_state.can_spawn(
-                unit_enum_map["DEMOLISHER"], [x, y], num_dem_per_loc
-            ):
-                dem_num += game_state.attempt_spawn(
-                    unit_enum_map["DEMOLISHER"], [x, y], num_dem_per_loc
-                )
+        for _ in range(game_state.number_affordable(unit_enum_map["DEMOLISHER"])):
+            dem_num += game_state.attempt_spawn(
+                unit_enum_map["DEMOLISHER"], [dem_x, dem_y]
+            )
 
         if wall_num == 0 or dem_num == 0:
             return False
