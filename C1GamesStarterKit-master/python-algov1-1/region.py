@@ -486,7 +486,7 @@ class Region:
         #     unit: self.simulate_average_damage(unit_enum_map, unit) for unit in units
         # }
 
-    def calculate_optimal_turret_placement(self, unit_enum_map: dict) -> (int, int):
+    def calculate_optimal_turret_placement(self, unit_enum_map: dict, potential_locations=None) -> (int, int):
         """
         Calculates optimal placement of turret based on the current region state.
         @param unit_enum_map: map describing the enumerations for each unit
@@ -497,10 +497,12 @@ class Region:
             # If no pre-existing turrets, random
             return random.choice(self.edge_coordinates(self.incoming_edges[0]))
 
+        if potential_locations is None:
+            potential_locations = self.coordinates
         # Otherwise, find location maximizing distance from all other turrets
         best_candidate = list(self.coordinates)[0]
         distance_from_other_turrets = 0
-        for coord in self.coordinates:
+        for coord in potential_locations:
             if (
                 self.grid_unit[self.zero_coordinates(coord)] is not None
                 or self.grid_type[self.zero_coordinates(coord)] == 0
@@ -573,6 +575,12 @@ class Region:
         @param game_state: Game State
         @param unit_enum_map: map describing the enumerations for each unit
         """
+
+        if not self.states["UNDEFENDED TILES"]:
+            optimal = self.calculate_optimal_turret_placement(unit_enum_map, potential_locations=self.states["UNDEFENDED TILES"])
+            game_state.attempt_spawn(
+                unit_type=unit_enum_map["TURRET"], locations=optimal
+            )
 
         if game_state.turn_number >= self.MIN_TURN_UPGRADE:
             upgrade = True
