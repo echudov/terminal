@@ -119,7 +119,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         game_state.suppress_warnings(True)
 
         # OUR TURN-DECISION-MAKING HERE
-        self.scored_on_locations = []
         # Refresh meta-info
         self.health_diff = health_differential(game_state)
 
@@ -134,6 +133,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Refresh scored on locations & enemy unit breaches
         self.scored_on_locations = []
         self.on_action_frame(turn_state)
+        gamelib.util.debug_write(self.scored_on_locations)
 
         # Perform moves - MAIN ENTRY POINT
         self.choose_and_execute_strategy(game_state, turn_state)
@@ -429,7 +429,7 @@ class AlgoStrategy(gamelib.AlgoCore):
                 interceptor_loc,
             )
 
-    def on_action_frame(self, action_frame_game_state: str):
+    def on_action_frame(self, turn_string: str):
         """
         This is the action frame of the game. This function could be called
         hundreds of times per turn and could slow the algo down so avoid putting slow code here.
@@ -439,7 +439,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         This sets our regions_attacked and scored_on_locations lists
         """
 
-        state = json.loads(action_frame_game_state)
+        state = json.loads(turn_string)
         events = state["events"]
 
         # Record which regions got attacked (had enemy units inside)
@@ -459,9 +459,12 @@ class AlgoStrategy(gamelib.AlgoCore):
             location = breach[0]
             unit_owner_self = True if breach[4] == 1 else False
             # When parsing the frame data directly,
+
             # 1 is integer for yourself, 2 is opponent (StarterKit code uses 0, 1 as player_index instead)
             if not unit_owner_self:
+                gamelib.debug_write("Got scored on at: {}".format(location))
                 self.scored_on_locations.append(location)
+                gamelib.debug_write("All locations: {}".format(self.scored_on_locations))
 
     #####################################################################
     ########### USEFUL BUT UNUSED FUNCTIONS THEY'VE PROVIDED ############
