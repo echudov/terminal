@@ -137,8 +137,6 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # Refresh regions attacked, if applicable
         # NOTE: regions_attacked and scored_on_locations lists set/updated in on_action_frame
-        if game_state.turn_number % self.RESET_ATTACKED_REGIONS_TURNS == 0:
-            self.regions_attacked.append({i: 0 for i in range(6)})
 
         game_state.submit_turn()  # Must be called at the end
 
@@ -207,7 +205,7 @@ class AlgoStrategy(gamelib.AlgoCore):
                     # Concentration on RIGHT HALF
                     wall_x_coord = 27 - (13 - (y_coord - 3))
                     wall_y_coord = y_coord - 3
-                    length = wall_y_coord
+                    length = 18
                     demolisher_x_coord = wall_x_coord - 1
                     demolisher_y_coord = wall_y_coord - 1
 
@@ -252,8 +250,8 @@ class AlgoStrategy(gamelib.AlgoCore):
             # Fortify regions scored on locations
             regions = set()
             for loc in set(self.scored_on_locations):
-                for potential_turret in game_state.game_map.get_locations_in_range(loc, radius=2):
-                    if potential_turret[1] < 13 and game_state.can_spawn(self.UNIT_ENUM_MAP["TURRET"], location=potential_turret):
+                for potential_turret in game_state.game_map.get_locations_in_range(loc, radius=1.5):
+                    if game_state.can_spawn(self.UNIT_ENUM_MAP["TURRET"], location=potential_turret):
                         game_state.attempt_spawn(self.UNIT_ENUM_MAP["TURRET"], locations=potential_turret)
                         game_state.attempt_upgrade(self.UNIT_ENUM_MAP["TURRET"], locations=potential_turret)
                         break
@@ -307,7 +305,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         possible_remaining = actual_factories_int - num
         for _ in range(possible_remaining):
             loc = factory_location_helper(game_state)
-            if loc is None:
+            if loc is None or loc[1]:
                 return  # Impossible to build a factory! (????)
 
             game_state.attempt_spawn(FACTORY, loc)

@@ -9,6 +9,7 @@ from gamelib.game_map import GameMap
 
 # Fraction of turrets in first 3 rows to be considered "concentrated"
 MIN_FRONT_TURRET_DENSITY = 0.6
+FACTORY_ROW_MAX = 6
 
 
 def factory_location_helper(game_state: GameState) -> (int, int):
@@ -25,7 +26,7 @@ def factory_location_helper(game_state: GameState) -> (int, int):
     # Start at (13, 1) and (14, 1) and work up (every +1y, have +2x)
 
     location = (13, 1)
-    for row in range(1, 13):
+    for row in range(1, FACTORY_ROW_MAX):
         # Start at 1st row and go up to top of our half
         x_left_bound = 13 - row
         x_right_bound = 14 + row

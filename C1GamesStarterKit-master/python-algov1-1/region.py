@@ -10,7 +10,7 @@ class Region:
     # CONSTANTS
 
     MIN_TURN_UPGRADE = 5  # Only start upgrading after this turn
-    MAX_TURRETS = 5
+    MAX_TURRETS = 7
 
     def __init__(
         self,
