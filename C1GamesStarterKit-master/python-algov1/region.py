@@ -334,12 +334,13 @@ class Region:
         self.calculate_paths()
 
         # iterate through all edges
-        if unit == "DEMOLISHER":
+        if unit == unit_enum_map["DEMOLISHER"]:
             speed = 2
-        elif unit == "SCOUT":
+        elif unit == unit_enum_map["SCOUT"]:
             speed = 1
-        elif unit == "INTERCEPTOR":
+        elif unit == unit_enum_map["INTERCEPTOR"]:
             speed = 4
+
         for incoming_edge in self.incoming_edges:
             for entrance in self.edge_coordinates(incoming_edge):
                 for path in self.path_dict[entrance].values():
@@ -452,7 +453,7 @@ class Region:
 
         return undefended
 
-    def calculate_region_states(self, unit_enum_map: dict):
+    def calculate_region_states(self, unit_enum_map: dict, units: list):
         self.states = {}
         self.states["AVG TILE DMG"] = self.average_tile_damage()
         self.states["REGION COST ALL"] = self.calculate_region_cost(
@@ -468,11 +469,9 @@ class Region:
             unit_enum_map, defensive_only=True
         )
         self.states["UNDEFENDED TILES"] = self.undefended_tiles()
-        """
-        states["SIMULATED DAMAGE"] = {
+        self.states["SIMULATED DAMAGE"] = {
             unit: self.simulate_average_damage(unit_enum_map, unit) for unit in units
         }
-        """
 
     def calculate_optimal_turret_placement(self, unit_enum_map: dict) -> (int, int):
         """

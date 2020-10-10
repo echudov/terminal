@@ -1,2 +1,5 @@
 # VSCode
 .vscode
+
+# Error files (output by local testing)
+error*.txt
