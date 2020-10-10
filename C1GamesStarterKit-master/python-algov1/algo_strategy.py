@@ -262,7 +262,7 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # Upgraded all possible ones. Now build any possible remaining
         possible_remaining = actual_factories_int - num
-        for _ in possible_remaining:
+        for _ in range(possible_remaining):
             loc = factory_location_helper(game_state)
             game_state.attempt_spawn(FACTORY, loc)
 
