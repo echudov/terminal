@@ -19,7 +19,7 @@ class Defense:
             self.create_our_regions(unit_enum_map)
         else:
             self.create_enemy_regions(unit_enum_map)
-        self.coordinate_regions = [[[] for y in range(14)] for x in range(28)]
+        self.coordinate_regions = np.full(shape=(28, 14), fill_value=-1)
         self.history = []
         self.units = {
             unit_enum_map["TURRET"]: set(),
@@ -177,10 +177,10 @@ class Defense:
         Initializes coordinate_regions to contain information about what region they are contained in
         """
         for i in range(len(self.regions)):
-            for coordinate in sum(self.regions[i].coordinates):
+            for coordinate in self.regions[i].coordinates:
                 self.coordinate_regions[
                     self.offset_coord(self.offset_coord(coordinate))
-                ].append(i)
+                ] = i
 
     def get_region(self, coord: list or tuple):
         """
@@ -188,7 +188,7 @@ class Defense:
         @param coord: (x, y) coordinate to query
         @return: list of regions containing coordinate
         """
-        return self.coordinate_regions[tuple(self.offset_coord(coord))]
+        return self.coordinate_regions[self.offset_coord(coord)]
 
     def offset_coord(self, coord: list or tuple):
         """

@@ -57,7 +57,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.enemy_units = {}  # Same as above, fo
         # r opponent
         self.units = {}  # Dict mapping unit type to unit objects
-        self.regions_attacked = {i: [] for i in range(6)}
+        self.regions_attacked = {i: 0 for i in range(6)}
         seed = random.randrange(maxsize)
         random.seed(seed)
         gamelib.debug_write("Random seed: {}".format(seed))
@@ -132,10 +132,13 @@ class AlgoStrategy(gamelib.AlgoCore):
             self.resolve_factory_impact_diff(game_state)
 
         # Build Reactive Defense
-        self.build_reactive_defense(game_state, turn_state)
+
 
         # Perform moves
-        self.choose_and_execute_strategy(game_state)  # Main entry point
+        self.choose_and_execute_strategy(game_state. turn_state)  # Main entry point
+        # refresh regions attacked
+        if game_state.turn_number % 2 == 0:
+            self.regions_attacked = {i : 0 for i in range(6)}
 
         game_state.submit_turn()  # Must be called at the end
 
@@ -196,7 +199,7 @@ class AlgoStrategy(gamelib.AlgoCore):
 
             return
 
-    def choose_and_execute_strategy(self, game_state: GameState):
+    def choose_and_execute_strategy(self, game_state: GameState, turn_state):
         """Wrapper to choose and execute a strategy based on the game state.
 
         Args:
@@ -209,7 +212,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         if game_state.turn_number < 3:
             self.starting_strategy(game_state)
             return
-
+        self.build_reactive_defense(game_state, turn_state)
         # TODO Temp
         if (game_state.turn_number % 2) == 0:
             self.stall_with_interceptors(game_state)
@@ -491,8 +494,9 @@ class AlgoStrategy(gamelib.AlgoCore):
             unit_list = p2units[unit_num]
             for unit in unit_list:
                 if unit[1] < 14:
-                    region = self.our_defense.get_region([unit[0], unit[1]])
-                    self.regions_attacked[region] += 1
+                    region = self.our_defense.get_region((unit[0], unit[1]))
+                    if region != -1:
+                        self.regions_attacked[region] += 1
 
         for breach in breaches:
             location = breach[0]
