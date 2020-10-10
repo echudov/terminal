@@ -359,18 +359,20 @@ class Defense:
         game_state: gamelib.GameState,
         unit_enum_map: dict,
         criteria: str = "DEFENSIVE POWER",
+        sp_left: int = 3
     ):
         """
         Fortifies defenses by finding the weakest region by our criteria
         and fortifying based on the Region fortify_region_defenses subroutine
+        @param sp_left: Amount of sp points to leave after defenses are fortified
         @param game_state: Game State to pass in
-        @param criteria:
+        @param criteria: Criteria to evaluate weakest region on
         """
 
         # TODO - Later remove count
 
         count = 0
-        while game_state.get_resource(0, 0) >= 4 and count < 30:
+        while game_state.get_resource(0, 0) > sp_left and count < 30:
             if game_state.turn_number > self.MIN_TURN_TO_FORTIFY_BACK_REGIONS:
                 # Check the back regions too (fortify factories, etc.)
                 weakest_region = self.weakest_region(
