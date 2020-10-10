@@ -4,6 +4,7 @@ import math
 import warnings
 from sys import maxsize
 import json
+import time
 
 from gamelib.game_state import GameState
 from gamelib.game_map import GameMap
@@ -19,11 +20,7 @@ from defensive_building_functions import (
     DefensiveTurretWallStrat,
 )
 
-from building_function_helper import (
-    factory_location_helper,
-    demolisher_location_helper,
-    coordinate_path_location_helper,
-)
+from building_function_helper import factory_location_helper, demolisher_location_helper
 
 from defense import Defense
 from region import Region
@@ -66,10 +63,10 @@ class AlgoStrategy(gamelib.AlgoCore):
         # OUR INITIAL SETUP BELOW
         self.health_diff = 0
         self.scored_on_locations = []
-        self.enemy_units = {}
+        self.enemy_units = {}  # Same as above, fo
+        # r opponent
         self.units = {}  # Dict mapping unit type to unit objects
         self.regions_attacked = [{i: 0 for i in range(6)}]
-        gamelib.debug_write(type(self.regions_attacked))
         seed = random.randrange(maxsize)
         random.seed(seed)
         gamelib.debug_write("Random seed: {}".format(seed))
@@ -125,11 +122,12 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Refresh meta-info
         self.health_diff = health_differential(game_state)
 
-        # Updating internal Defense values
+        # Updating internal values Defense values
         self.our_defense.update_defense(self.UNIT_ENUM_MAP, game_state)
         self.their_defense.update_defense(self.UNIT_ENUM_MAP, game_state)
 
         # Refresh units list for both players
+        # TODO - Refactor using Defense - Use the .units attribute from there
         self.units = self.our_defense.units
         self.enemy_units = self.their_defense.units
 
@@ -137,9 +135,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.choose_and_execute_strategy(game_state, turn_state)
 
         # Refresh regions attacked, if applicable
-        # NOTE: regions_attacked and scored_on_locations lists set/updated in on_action_frame
         if game_state.turn_number % self.RESET_ATTACKED_REGIONS_TURNS == 0:
-            self.regions_attacked.clear()
             self.regions_attacked.append({i: 0 for i in range(6)})
 
         game_state.submit_turn()  # Must be called at the end
@@ -165,6 +161,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         # scored_on_locations reset to empty before processing
         self.on_action_frame(turn_state)
 
+        # TODO - Have they gotten far in our base?
         if not self.scored_on_locations:
             # BASE CASE (NORMAL)
 
@@ -205,15 +202,10 @@ class AlgoStrategy(gamelib.AlgoCore):
                     length = wall_y_coord
                     demolisher_x_coord = wall_x_coord + 1
                     demolisher_y_coord = wall_y_coord - 1
-                    path = game_state.find_path_to_edge(
-                        (demolisher_x_coord, demolisher_y_coord)
-                    )
-                    while path is None or len(path) < 3:
+                    while len(game_state.find_path_to_edge((demolisher_x_coord, demolisher_y_coord))) < 3:
                         demolisher_x_coord += 1
                         demolisher_y_coord -= 1
-                        path = game_state.find_path_to_edge(
-                            (demolisher_x_coord, demolisher_y_coord)
-                        )
+
                 else:
                     # Concentration on RIGHT HALF
                     wall_x_coord = 27 - (13 - (y_coord - 3))
@@ -221,15 +213,11 @@ class AlgoStrategy(gamelib.AlgoCore):
                     length = wall_y_coord
                     demolisher_x_coord = wall_x_coord - 1
                     demolisher_y_coord = wall_y_coord - 1
-                    path = game_state.find_path_to_edge(
-                        (demolisher_x_coord, demolisher_y_coord)
-                    )
+                    path = game_state.find_path_to_edge((demolisher_x_coord, demolisher_y_coord))
                     while path is None or len(path) < 3:
                         demolisher_x_coord -= 1
                         demolisher_y_coord -= 1
-                        path = game_state.find_path_to_edge(
-                            (demolisher_x_coord, demolisher_y_coord)
-                        )
+                        path = game_state.find_path_to_edge((demolisher_x_coord, demolisher_y_coord))
 
                 num_demolishers = math.floor(game_state.number_affordable(DEMOLISHER))
                 OffensiveDemolisherLine().build_demolisher_line(
@@ -239,33 +227,28 @@ class AlgoStrategy(gamelib.AlgoCore):
                     length,
                     [wall_x_coord, wall_y_coord],
                     [demolisher_x_coord, demolisher_y_coord],
-                    x_half,
+                    x_half
                 )
             else:
                 # Perform an interceptor spam on their weakest region
-
-                # Don't care about the back regions w.r.t Undefended Tiles (it's the back)
+                # TODO - Find their least-defended region and target
                 w_region_id = self.their_defense.weakest_region(
-                    self.UNIT_ENUM_MAP,
-                    criteria="UNDEFENDED TILES",
-                    regions_to_consider=range(4),
+                    self.UNIT_ENUM_MAP, criteria="UNDEFENDED TILES"
                 )
-                w_region_coords = self.their_defense.regions[w_region_id].coordinates
+                w_region = self.their_defense.regions[w_region_id]
+                w_region_coords = w_region.coordinates
 
-                # Find where to place Interceptor to pass through 1 of those coords
-                interceptor_loc = coordinate_path_location_helper(
-                    game_state, w_region_coords
+                row = 7  # Place near middle of y-coord
+                x_left_bound = 13 - row
+
+                num_interceptors = math.floor(game_state.number_affordable(INTERCEPTOR))
+
+                OffensiveInterceptorSpam().build_interceptor_spam_single_loc(
+                    game_state,
+                    self.UNIT_ENUM_MAP,
+                    num_interceptors,
+                    [x_left_bound, row],
                 )
-                if interceptor_loc is not None:
-                    num_interceptors = math.floor(
-                        game_state.number_affordable(INTERCEPTOR)
-                    )
-                    OffensiveInterceptorSpam().build_interceptor_spam_single_loc(
-                        game_state,
-                        self.UNIT_ENUM_MAP,
-                        num_interceptors,
-                        interceptor_loc,
-                    )
         else:
             # EMERGENCY CASE - Fortify immediately
 
@@ -284,8 +267,8 @@ class AlgoStrategy(gamelib.AlgoCore):
             # General defense fortification
             self.our_defense.fortify_defenses(game_state, self.UNIT_ENUM_MAP)
 
-            # Send interceptors through our weakest regions
-            self.defend_strategically_with_interceptors(game_state)
+            # TODO - More Intelligent Interceptor Defense
+            self.defend_with_interceptors(game_state)
 
     def resolve_factory_impact_diff(
         self, game_state: GameState, deprioritize: bool = False
@@ -413,29 +396,58 @@ class AlgoStrategy(gamelib.AlgoCore):
     ######################### HELPER FUNCTIONS ##########################
     #####################################################################
 
-    def defend_strategically_with_interceptors(self, game_state: GameState):
+    def build_reactive_defense(self, game_state: GameState, turn_state: str):
         """
-        Send out interceptors to pass through our weakest region as defense!
+        This function builds reactive defenses based on where the enemy scored on us from.
+        We can track where the opponent scored by looking at events in action frames
+        as shown in the on_action_frame function
         """
 
-        # Pass interceptors through OUR weakest region
-        w_region_id = self.our_defense.weakest_region(
-            self.UNIT_ENUM_MAP,
-            criteria="UNDEFENDED TILES",
-            regions_to_consider=range(4),
+        # TODO - Currently unused!
+
+        self.on_action_frame(turn_state)
+
+        attacked_region = None
+        max_attacks = 0
+        for i in range(6):
+            if self.regions_attacked[-1][i] > max_attacks:
+                max_attacks = self.regions_attacked[-1][i]
+                attacked_region = i
+        if attacked_region is None:
+            self.our_defense.fortify_defenses(game_state, self.UNIT_ENUM_MAP)
+            return
+
+        placement = self.our_defense.regions[attacked_region].random_turret_placement(
+            game_state
         )
-        w_region_coords = self.our_defense.regions[w_region_id].coordinates
 
-        # Find where to place Interceptor to pass through 1 of those coords
-        interceptor_loc = coordinate_path_location_helper(game_state, w_region_coords)
-        if interceptor_loc is not None:
-            num_interceptors = math.floor(game_state.number_affordable(INTERCEPTOR))
-            OffensiveInterceptorSpam().build_interceptor_spam_single_loc(
-                game_state,
-                self.UNIT_ENUM_MAP,
-                num_interceptors,
-                interceptor_loc,
-            )
+        DefensiveTurretWallStrat().build_turret_wall_pair(
+            game_state, self.UNIT_ENUM_MAP, placement, above=True
+        )
+
+        for location in self.scored_on_locations:
+            build_location = [location[0], location[1]]
+            if game_state.can_spawn(TURRET, build_location):
+                game_state.attempt_spawn(TURRET, build_location)
+
+    def defend_with_interceptors(self, game_state: GameState):
+        """
+        Send out interceptors at random locations to defend our base from enemy moving units.
+        """
+
+        # TODO - Make Intelligent (make Interceptors pass through OUR weakest regions)
+
+        num_interceptors = math.floor(game_state.number_affordable(INTERCEPTOR) / 2)
+        row = 7  # Place near middle of y-coord
+        x_left_bound = 13 - row
+        x_right_bound = 14 + row
+
+        OffensiveInterceptorSpam().build_interceptor_spam_multiple_locs(
+            game_state,
+            self.UNIT_ENUM_MAP,
+            num_interceptors,
+            [[x_left_bound, row], [x_right_bound, row]],
+        )
 
     def on_action_frame(self, action_frame_game_state: str):
         """
@@ -443,8 +455,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         hundreds of times per turn and could slow the algo down so avoid putting slow code here.
         Processing the action frames is complicated so we only suggest it if you have time and experience.
         Full doc on format of a game frame at in json-docs.html in the root of the Starterkit.
-
-        This sets our regions_attacked and scored_on_locations lists
         """
 
         state = json.loads(action_frame_game_state)
