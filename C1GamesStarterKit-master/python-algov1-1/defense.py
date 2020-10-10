@@ -1,6 +1,7 @@
 import gamelib
 import numpy as np
 from region import Region
+import queue
 
 
 class Defense:
@@ -9,6 +10,7 @@ class Defense:
     # Relative weight (lower means more emphasis on turrets)
     TURRET_TO_WALL_RATIO = 0.75
     MIN_TURN_TO_FORTIFY_BACK_REGIONS = 5  # Used in fortify_defenses
+    MIN_TURN_REBUILD = 13
 
     def __init__(self, unit_enum_map: dict, player_id: int):
         """
@@ -32,6 +34,8 @@ class Defense:
             unit_enum_map["FACTORY"]: [],
             unit_enum_map["WALL"]: [],
         }
+        self.turrets_to_rebuild = queue.Queue()
+        self.walls_to_rebuild = queue.Queue()
 
     def create_our_regions(self, unit_enum_map: dict):
         self.regions[0] = Region(
@@ -370,6 +374,31 @@ class Defense:
         """
 
         # TODO - Later remove count
+        while not self.turrets_to_rebuild.empty() and game_state.get_resource(0, 0) >= 4:
+            elem = self.turrets_to_rebuild.get()
+            if game_state.attempt_spawn(unit_type=unit_enum_map["TURRET"], locations=elem["COORD"]) > 0:
+                if elem["UPGRADE"]:
+                    game_state.attempt_upgrade(locations=elem["COORD"])
+
+        self.turrets_to_rebuild = queue.Queue()
+
+        while not self.walls_to_rebuild.empty() and game_state.get_resource(0, 0) >= 4:
+            elem = self.walls_to_rebuild.get()
+            if game_state.attempt_spawn(unit_type=unit_enum_map["WALL"], locations=elem["COORD"]) > 0:
+                if elem["UPGRADE"]:
+                    game_state.attempt_upgrade(locations=elem["COORD"])
+
+        self.walls_to_rebuild = queue.Queue()
+
+        if game_state.turn_number >= self.MIN_TURN_REBUILD and game_state.get_resource(0, 0) >= 4:
+            for turret in self.units[unit_enum_map["TURRET"]]:
+                if turret.health < 0.75 * turret.max_health:
+                    self.turrets_to_rebuild.put({"COORD": [turret.x, turret.y], "UPGRADE": turret.upgraded})
+                    game_state.attempt_remove([turret.x, turret.y])
+            for wall in self.units[unit_enum_map["WALL"]]:
+                if wall.health < 0.5 * wall.max_health:
+                    self.walls_to_rebuild.put({"COORD": [wall.x, wall.y], "UPGRADE": wall.upgraded})
+                    game_state.attempt_remove([wall.x, wall.y])
 
         count = 0
         while game_state.get_resource(0, 0) > sp_left and count < 30:

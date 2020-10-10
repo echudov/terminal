@@ -3,12 +3,14 @@ import numpy as np
 import random
 import time
 import math
+import queue
 
 
 class Region:
     # CONSTANTS
 
     MIN_TURN_UPGRADE = 8  # Only start upgrading after this turn
+    MAX_TURRETS = 5
 
     def __init__(
         self,
@@ -581,7 +583,7 @@ class Region:
             game_state.attempt_spawn(
                 unit_type=unit_enum_map["TURRET"], locations=optimal
             )
-        elif len(self.units[unit_enum_map["TURRET"]]) > 1:
+        elif self.MAX_TURRETS > len(self.units[unit_enum_map["TURRET"]]) > 1:
 
             if (
                 any(
@@ -607,6 +609,12 @@ class Region:
                     game_state.attempt_spawn(
                         unit_type=unit_enum_map["TURRET"], locations=optimal
                     )
+        else:
+            optimal = self.calculate_optimal_turret_upgrade(unit_enum_map)
+            if not optimal:
+                game_state.attempt_upgrade(
+                    unit_type=unit_enum_map["TURRET"], locations=optimal
+                )
 
     def point_inside_polygon(self, x: int, y: int, poly: list) -> bool:
         """
