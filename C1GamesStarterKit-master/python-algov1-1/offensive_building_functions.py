@@ -123,10 +123,10 @@ class OffensiveDemolisherLine:
         path = game_state.find_path_to_edge(dem_location)
         while path is None or len(path) < 3:
             if right:
-                dem_location[1] += 1
+                dem_location[0] += 1
             else:
-                dem_location[1] -= 1
-            dem_location -= 1
+                dem_location[0] -= 1
+            dem_location[1] -= 1
             path = game_state.find_path_to_edge(dem_location)
         # Build as many demolishers as possible at dem_location
         for _ in range(game_state.number_affordable(unit_enum_map["DEMOLISHER"])):
