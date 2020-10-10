@@ -250,6 +250,9 @@ class AlgoStrategy(gamelib.AlgoCore):
             # Fortify regions scored on locations
             regions = set()
             for loc in set(self.scored_on_locations):
+                if loc[0] > 12:
+                    for i in range(4):
+                        game_state.attempt_spawn(self.UNIT_ENUM_MAP["WALL"], locations=[[i, 13], [27 - i, 13]])
                 for potential_turret in game_state.game_map.get_locations_in_range(loc, radius=1.5):
                     if game_state.can_spawn(self.UNIT_ENUM_MAP["TURRET"], location=potential_turret):
                         game_state.attempt_spawn(self.UNIT_ENUM_MAP["TURRET"], locations=potential_turret)
