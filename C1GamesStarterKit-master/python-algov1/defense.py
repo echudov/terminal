@@ -237,7 +237,10 @@ class Defense:
             region.calculate_region_states(unit_enum_map, units)
 
         for x in range(game_state.ARENA_SIZE):
-            for y in range(game_state.HALF_ARENA * self.player_id, game_state.HALF_ARENA * (1 + self.player_id)):
+            for y in range(
+                game_state.HALF_ARENA * self.player_id,
+                game_state.HALF_ARENA * (1 + self.player_id),
+            ):
                 if not game_state.game_map.in_arena_bounds((x, y)):
                     continue
                 unit = game_state.game_map[x, y]
@@ -249,10 +252,7 @@ class Defense:
                     or unit.unit_type == unit_enum_map["TURRET"]
                     or unit.unit_type == unit_enum_map["FACTORY"]
                 ):
-                    gamelib.util.debug_write(self.units)
                     self.units[unit.unit_type].append(unit)
-                    gamelib.util.debug_write(self.units)
-        gamelib.util.debug_write(self.units)
 
     def get_defense_undefended_tiles(self):
         """
@@ -362,7 +362,7 @@ class Defense:
         game_state: gamelib.GameState,
         unit_enum_map: dict,
         criteria: str = "DEFENSIVE POWER",
-        sp_left: int = 3
+        sp_left: int = 3,
     ):
         """
         Fortifies defenses by finding the weakest region by our criteria
@@ -387,7 +387,12 @@ class Defense:
                 )
 
             gamelib.util.debug_write(
-                "WEAKEST REGION AT COUNT: " + str(count) + " is: " + str(weakest_region) + "; CURRENT SP IS: " + str(game_state.get_resource(0, 0))
+                "WEAKEST REGION AT COUNT: "
+                + str(count)
+                + " is: "
+                + str(weakest_region)
+                + "; CURRENT SP IS: "
+                + str(game_state.get_resource(0, 0))
             )
             self.regions[weakest_region].fortify_region_defenses(
                 game_state, unit_enum_map

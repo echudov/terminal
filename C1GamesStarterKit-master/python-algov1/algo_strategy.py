@@ -154,8 +154,6 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         self.on_action_frame(turn_state)
 
-
-
         # For the first 3 turns, just get set up
         if game_state.turn_number < 3:
             self.starting_strategy(game_state)
@@ -174,7 +172,9 @@ class AlgoStrategy(gamelib.AlgoCore):
                     max_attacks = self.regions_attacked[-1][i]
                     attacked_region = i
             if attacked_region is not None:
-                self.our_defense.regions[i].fortify_region_defenses(game_state, self.UNIT_ENUM_MAP)
+                self.our_defense.regions[i].fortify_region_defenses(
+                    game_state, self.UNIT_ENUM_MAP
+                )
 
             self.our_defense.fortify_defenses(game_state, self.UNIT_ENUM_MAP)
             # TODO - Do they have many structures near their front?
@@ -214,7 +214,9 @@ class AlgoStrategy(gamelib.AlgoCore):
         else:
             for loc in set(self.scored_on_locations):
                 to_fortify = self.our_defense.get_region(loc)
-                self.our_defense.regions[to_fortify].fortify_region_defenses(game_state, self.UNIT_ENUM_MAP)
+                self.our_defense.regions[to_fortify].fortify_region_defenses(
+                    game_state, self.UNIT_ENUM_MAP
+                )
             self.resolve_factory_impact_diff(game_state, deprioritize=True)
 
             # TODO - More Intelligent Interceptor Defense
@@ -439,11 +441,7 @@ class AlgoStrategy(gamelib.AlgoCore):
             # When parsing the frame data directly,
             # 1 is integer for yourself, 2 is opponent (StarterKit code uses 0, 1 as player_index instead)
             if not unit_owner_self:
-                gamelib.debug_write("Got scored on at: {}".format(location))
                 self.scored_on_locations.append(location)
-                gamelib.debug_write(
-                    "All locations: {}".format(self.scored_on_locations)
-                )
 
     #####################################################################
     ########### USEFUL BUT UNUSED FUNCTIONS THEY'VE PROVIDED ############

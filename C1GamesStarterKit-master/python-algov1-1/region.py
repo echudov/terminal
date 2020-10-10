@@ -501,7 +501,10 @@ class Region:
         best_candidate = list(self.coordinates)[0]
         distance_from_other_turrets = 0
         for coord in self.coordinates:
-            if self.grid_unit[self.zero_coordinates(coord)] is not None or self.grid_type[self.zero_coordinates(coord)] == 0:
+            if (
+                self.grid_unit[self.zero_coordinates(coord)] is not None
+                or self.grid_type[self.zero_coordinates(coord)] == 0
+            ):
                 continue
 
             # Maxmize distanced to ALL turrets
@@ -576,21 +579,18 @@ class Region:
         else:
             upgrade = False
 
-        gamelib.util.debug_write("TURRET COUNT: " + str(self.units[unit_enum_map["TURRET"]]))
-        if len(self.units[unit_enum_map["TURRET"]]) > 2 * len(self.units[unit_enum_map["WALL"]]):
-            gamelib.util.debug_write("LESS TURRETS THAN WALLS")
+        if len(self.units[unit_enum_map["TURRET"]]) > 2 * len(
+            self.units[unit_enum_map["WALL"]]
+        ):
             # Place more walls near turrets
             self.place_walls_near_turrets(game_state, unit_enum_map, upgrade=upgrade)
 
         if len(self.units[unit_enum_map["TURRET"]]) <= 1:
-            gamelib.debug_write("LESS THAN 2 TURRETS")
             optimal = self.calculate_optimal_turret_placement(unit_enum_map)
-            gamelib.util.debug_write("OPTIMAL_TURRET PLACEMENT: " + str(optimal))
             game_state.attempt_spawn(
                 unit_type=unit_enum_map["TURRET"], locations=optimal
             )
         elif 1 < len(self.units[unit_enum_map["TURRET"]]) < self.MAX_TURRETS:
-            gamelib.util.debug_write("MORE THAN ONE TURRET")
             if (
                 any(
                     (turret.health / turret.max_health < 0.5)
@@ -598,14 +598,12 @@ class Region:
                 )
                 and game_state.get_resource(0, 0) >= 2
             ):
-                gamelib.debug_write("Less than half hp")
                 # Could have many turrets but atleast 1 is low health
                 optimal = self.calculate_optimal_turret_placement(unit_enum_map)
                 game_state.attempt_spawn(
                     unit_type=unit_enum_map["TURRET"], locations=optimal
                 )
             elif game_state.get_resource(0, 0) >= 4:
-                gamelib.debug_write("TRYING TO UPGRADE")
                 optimal = self.calculate_optimal_turret_upgrade(unit_enum_map)
                 if not optimal:
                     game_state.attempt_upgrade(
@@ -617,7 +615,6 @@ class Region:
                         unit_type=unit_enum_map["TURRET"], locations=optimal
                     )
         elif len(self.units[unit_enum_map["TURRET"]]) >= self.MAX_TURRETS:
-            gamelib.debug_write("MORE THAN 5 TURRETS")
             optimal = self.calculate_optimal_turret_upgrade(unit_enum_map)
             if not optimal:
                 game_state.attempt_upgrade(

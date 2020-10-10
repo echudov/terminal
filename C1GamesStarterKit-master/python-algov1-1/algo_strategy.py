@@ -69,7 +69,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.enemy_units = {}
         self.units = {}  # Dict mapping unit type to unit objects
         self.regions_attacked = [{i: 0 for i in range(6)}]
-        gamelib.debug_write(type(self.regions_attacked))
         seed = random.randrange(maxsize)
         random.seed(seed)
         gamelib.debug_write("Random seed: {}".format(seed))
@@ -474,11 +473,7 @@ class AlgoStrategy(gamelib.AlgoCore):
             # When parsing the frame data directly,
             # 1 is integer for yourself, 2 is opponent (StarterKit code uses 0, 1 as player_index instead)
             if not unit_owner_self:
-                gamelib.debug_write("Got scored on at: {}".format(location))
                 self.scored_on_locations.append(location)
-                gamelib.debug_write(
-                    "All locations: {}".format(self.scored_on_locations)
-                )
 
     #####################################################################
     ########### USEFUL BUT UNUSED FUNCTIONS THEY'VE PROVIDED ############
