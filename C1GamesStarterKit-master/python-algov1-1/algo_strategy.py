@@ -184,7 +184,6 @@ class AlgoStrategy(gamelib.AlgoCore):
             self.our_defense.fortify_defenses(game_state, self.UNIT_ENUM_MAP)
 
             # Do they have many structures near their front?
-            gamelib.debug_write(self.their_defense.units)
             concentrated_frontal_area = demolisher_location_helper(
                 game_state, self.UNIT_ENUM_MAP, self.their_defense.units
             )
@@ -214,9 +213,11 @@ class AlgoStrategy(gamelib.AlgoCore):
                     length = wall_y_coord
                     demolisher_x_coord = wall_x_coord - 1
                     demolisher_y_coord = wall_y_coord - 1
-                    while len(game_state.find_path_to_edge((demolisher_x_coord, demolisher_y_coord))) < 3:
+                    path = game_state.find_path_to_edge((demolisher_x_coord, demolisher_y_coord))
+                    while path is None or len(path) < 3:
                         demolisher_x_coord -= 1
                         demolisher_y_coord -= 1
+                        path = game_state.find_path_to_edge((demolisher_x_coord, demolisher_y_coord))
 
                 num_demolishers = math.floor(game_state.number_affordable(DEMOLISHER))
                 OffensiveDemolisherLine().build_demolisher_line(

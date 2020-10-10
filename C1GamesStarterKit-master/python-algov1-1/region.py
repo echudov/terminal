@@ -493,7 +493,7 @@ class Region:
         best_candidate = list(self.coordinates)[0]
         distance_from_other_turrets = 0
         for coord in self.coordinates:
-            if self.grid_unit[self.zero_coordinates(coord)] is not None:
+            if self.grid_unit[self.zero_coordinates(coord)] is not None or self.grid_type[self.zero_coordinates(coord)] == 0:
                 continue
 
             # Maxmize distanced to ALL turrets
@@ -571,15 +571,18 @@ class Region:
         if len(self.units[unit_enum_map["TURRET"]]) > 2 * len(
             self.units[unit_enum_map["WALL"]]
         ):
+            gamelib.util.debug_write("LESS TURRETS THAN WALLS")
             # Place more walls near turrets
             self.place_walls_near_turrets(game_state, unit_enum_map, upgrade=upgrade)
 
         if len(self.units[unit_enum_map["TURRET"]]) <= 1:
+            gamelib.debug_write("LESS THAN 2 TURRETS")
             optimal = self.calculate_optimal_turret_placement(unit_enum_map)
             game_state.attempt_spawn(
                 unit_type=unit_enum_map["TURRET"], locations=optimal
             )
         elif len(self.units[unit_enum_map["TURRET"]]) > 1:
+
             if (
                 any(
                     (turret.health / turret.max_health < 0.5)
@@ -587,6 +590,7 @@ class Region:
                 )
                 and game_state.get_resource(0, 0) >= 2
             ):
+                gamelib.debug_write("Less than half hp")
                 # Could have many turrets but atleast 1 is low health
                 optimal = self.calculate_optimal_turret_placement(unit_enum_map)
                 game_state.attempt_spawn(
@@ -596,6 +600,11 @@ class Region:
                 optimal = self.calculate_optimal_turret_upgrade(unit_enum_map)
                 if not optimal:
                     game_state.attempt_upgrade(
+                        unit_type=unit_enum_map["TURRET"], locations=optimal
+                    )
+                else:
+                    optimal = self.calculate_optimal_turret_placement(unit_enum_map)
+                    game_state.attempt_spawn(
                         unit_type=unit_enum_map["TURRET"], locations=optimal
                     )
 

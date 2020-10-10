@@ -67,11 +67,12 @@ def demolisher_location_helper(
             # Only count if within front 3 rows
             y_coords.update({turret.y: 1})
 
-    if len(y_coords.elements()) < MIN_FRONT_TURRET_DENSITY * len(their_turrets):
+    if sum(list(y_coords.elements())) < MIN_FRONT_TURRET_DENSITY * len(their_turrets):
         return None  # Their front 3 rows are not that concentrated
 
-    # Returns a tuple (elem, count)
-    highest_concentration_y = y_coords.most_common(1)[0]
+    # Returns a list of tuples (elem, count)
+    highest_concentration = y_coords.most_common(1)[0]
+    highest_concentration_y = highest_concentration[0]
 
     # Find the left/right half with highest concentration
     left_right_half_counter = Counter()
