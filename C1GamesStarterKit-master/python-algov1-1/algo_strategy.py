@@ -152,18 +152,9 @@ class AlgoStrategy(gamelib.AlgoCore):
             turn_state (str): Turn state (for frame analysis)
         """
 
-        # self.on_action_frame(turn_state)
-
-        # attacked_region = None
-        # max_attacks = 0
-        # for i in range(6):
-        #     if self.regions_attacked[-1][i] > max_attacks:
-        #         max_attacks = self.regions_attacked[-1][i]
-        #         attacked_region = i
-        # if attacked_region is not None:
-        #     self.our_defense.regions[i].fortify_region_defenses(game_state, self.UNIT_ENUM_MAP)
-
-        # self.our_defense.fortify_defenses(game_state, self.UNIT_ENUM_MAP)
+        # Refresh scored on locations & enemy unit breaches
+        # scored_on_locations reset to empty before processing
+        self.on_action_frame(turn_state)
 
         # For the first 3 turns, just get set up
         if game_state.turn_number < 3:
@@ -171,10 +162,24 @@ class AlgoStrategy(gamelib.AlgoCore):
             return
 
         # TODO - Have they gotten far in our base?
-        defenses_breached = True
-        if not defenses_breached:
+        if not self.scored_on_locations:
+            # BASE CASE (NORMAL)
+
             # Keep upgrading/building factories (max 50% of SP)
             self.resolve_factory_impact_diff(game_state)
+
+            # Fortify regions
+            attacked_region = None
+            max_attacks = 0
+            for i in range(6):
+                if self.regions_attacked[-1][i] > max_attacks:
+                    max_attacks = self.regions_attacked[-1][i]
+                    attacked_region = i
+            if attacked_region is not None:
+                self.our_defense.regions[i].fortify_region_defenses(
+                    game_state, self.UNIT_ENUM_MAP
+                )
+            self.our_defense.fortify_defenses(game_state, self.UNIT_ENUM_MAP)
 
             # Do they have many structures near their front?
             concentrated_frontal_area = demolisher_location_helper(
@@ -220,13 +225,19 @@ class AlgoStrategy(gamelib.AlgoCore):
                     [[x_left_bound, row], [x_right_bound, row]],
                 )
         else:
-            self.resolve_factory_impact_diff(game_state, deprioritize=True)
+            # EMERGENCY CASE
 
+            # Fortify scored on locations
+            for loc in set(self.scored_on_locations):
+                to_fortify = self.our_defense.get_region(loc)
+                self.our_defense.regions[to_fortify].fortify_region_defenses(
+                    game_state, self.UNIT_ENUM_MAP
+                )
+            self.resolve_factory_impact_diff(game_state, deprioritize=True)
+            # fortify defenses with remaining SP points
+            self.our_defense.fortify_defenses(game_state, self.UNIT_ENUM_MAP)
             # TODO - More Intelligent Interceptor Defense
             self.defend_with_interceptors(game_state)
-
-            # TODO - What regions have been affected by the breach?
-            breached_regions = []
 
             # TODO - Fortify those regions closest to the front
 
@@ -437,6 +448,7 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # Record locations we got scored on
         breaches = events["breach"]
+        self.scored_on_locations = []
         for breach in breaches:
             location = breach[0]
             unit_owner_self = True if breach[4] == 1 else False
