@@ -116,8 +116,7 @@ class OffensiveDemolisherLine:
             bool (int): Whether this strategy was successfully executed
         """
 
-        # Build a full line towards direction of location until end
-        wall_num = 0
+        # Build a full line towards right of location (might overflow but fine)
         wall_num = DefensiveWallStrat().build_h_wall_line(
             game_state, unit_enum_map, location, game_state.ARENA_SIZE, right=right
         )
