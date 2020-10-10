@@ -591,7 +591,7 @@ class Region:
             self.units[unit_enum_map["WALL"]]
         ):
             # Place more walls near turrets
-            self.place_walls_near_turrets(game_state, unit_enum_map, upgrade=upgrade)
+            self.place_walls_near_turrets(game_state, unit_enum_map, upgrade=upgrade, count=3)
 
         if len(self.units[unit_enum_map["TURRET"]]) <= 1:
             optimal = self.calculate_optimal_turret_placement(unit_enum_map)
@@ -623,11 +623,12 @@ class Region:
                         unit_type=unit_enum_map["TURRET"], locations=optimal
                     )
         elif len(self.units[unit_enum_map["TURRET"]]) >= self.MAX_TURRETS:
-            optimal = self.calculate_optimal_turret_upgrade(unit_enum_map)
-            if not optimal:
-                game_state.attempt_upgrade(
-                    unit_type=unit_enum_map["TURRET"], locations=optimal
-                )
+            for turret in self.units[unit_enum_map["TURRET"]]:
+                if not turret.upgraded:
+                    game_state.attempt_upgrade([turret.x, turret.y])
+            for wall in self.units[unit_enum_map["WALL"]]:
+                if not wall.upgraded:
+                    game_state.attempt_upgrade([wall.x, wall.y])
 
     def point_inside_polygon(self, x: int, y: int, poly: list) -> bool:
         """

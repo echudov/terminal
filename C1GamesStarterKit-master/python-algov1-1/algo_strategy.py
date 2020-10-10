@@ -119,7 +119,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         game_state.suppress_warnings(True)
 
         # OUR TURN-DECISION-MAKING HERE
-
+        self.scored_on_locations = []
         # Refresh meta-info
         self.health_diff = health_differential(game_state)
 
