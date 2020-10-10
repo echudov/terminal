@@ -100,7 +100,8 @@ class OffensiveDemolisherLine:
         game_state: GameState,
         unit_enum_map: dict,
         num_demolishers: int,
-        location: (int, int) or [int],
+        wall_location: (int, int) or [int],
+        dem_location: (int, int) or [int],
         right: bool = True,
     ) -> bool:
         """Builds a line of walls starting at the given location and stacked demolishers 1 tile back
@@ -109,7 +110,8 @@ class OffensiveDemolisherLine:
             game_state (GameState): The current GameState object
             unit_enum_map (dict): Maps NAME to unit enum
             num_demolishers (int): How many demolishers
-            location (int, int) or [int]: The (x, y) or [x, y] coordinate to place them at
+            wall_location (int, int) or [int]: The (x, y) or [x, y] coordinate to place them at
+            dem_location (int, int) or [int]: The (x, y) or [x, y] coordinate to place the dems at
             right (bool): Whether to build the walls towards the right (or left)
 
         Returns:

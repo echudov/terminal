@@ -191,17 +191,21 @@ class AlgoStrategy(gamelib.AlgoCore):
                 # Target that frontal area (row + left/right half)
 
                 y_coord = concentrated_frontal_area[0]
-                x_half = concentrated_frontal_area[1]  # if True, LEFT, else RIGHT
+                x_half = concentrated_frontal_area[1]  # If True, LEFT, else RIGHT
 
                 # Place demolishers such that they are JUST far enough to target y_coord
-                # Range is 4.5
+                # Demolishers range is 4.5
                 if x_half:
-                    # LEFT HALF - Place demolishers on right half
-                    x_coord = 13 + y_coord
+                    # Concentration on LEFT HALF
+                    wall_x_coord = 13 - (y_coord - 3)
+                    dem_x_coord = y_coord - 14  # Their rows start at y = 14
                 else:
-                    # RIGHT HALF - Place demolishers on left half
-                    x_coord = 13 - y_coord
+                    # Concentration on RIGHT HALF
+                    wall_
+                    dem_x_coord = 27 - (y_coord - 14)  # Their rows start at y = 14
 
+                wall_loc = [x_coord, y_coord - 2]
+                dem_loc = [x_coord, y_coord - 3]
                 num_demolishers = math.floor(game_state.number_affordable(DEMOLISHER))
                 OffensiveDemolisherLine().build_demolisher_line(
                     game_state,
