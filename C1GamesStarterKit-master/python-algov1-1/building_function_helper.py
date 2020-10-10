@@ -57,6 +57,9 @@ def demolisher_location_helper(
 
     # Find the row (y-coord) with highest number of turrets
     their_turrets = enemy_units[unit_enum_map["TURRET"]]
+    if len(their_turrets) == 0:
+        return None
+
     y_coords = Counter()  # Maps point y-coord to count
 
     for turret in their_turrets:
@@ -66,9 +69,9 @@ def demolisher_location_helper(
 
     if len(y_coords.elements()) < MIN_FRONT_TURRET_DENSITY * len(their_turrets):
         return None  # Their front 3 rows are not that concentrated
-    highest_concentration_y = y_coords.most_common(1)
 
-    # Start of their halves in middle
+    # Returns a tuple (elem, count)
+    highest_concentration_y = y_coords.most_common(1)[0]
 
     # Find the left/right half with highest concentration
     left_right_half_counter = Counter()

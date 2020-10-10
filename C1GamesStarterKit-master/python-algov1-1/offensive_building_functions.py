@@ -110,34 +110,20 @@ class OffensiveDemolisherLine:
             game_state (GameState): The current GameState object
             unit_enum_map (dict): Maps NAME to unit enum
             num_demolishers (int): How many demolishers
-            wall_location (int, int) or [int]: The (x, y) or [x, y] coordinate to place them at
+            wall_location (int, int) or [int]: The (x, y) or [x, y] coordinate to place the walls at
             dem_location (int, int) or [int]: The (x, y) or [x, y] coordinate to place the dems at
             right (bool): Whether to build the walls towards the right (or left)
-
-        Returns:
-            bool (int): Whether this strategy was successfully executed
         """
 
         # Build a full line towards right of location (might overflow but fine)
-        wall_num = DefensiveWallStrat().build_h_wall_line(
-            game_state, unit_enum_map, location, game_state.ARENA_SIZE, right=right
+        DefensiveWallStrat().build_h_wall_line(
+            game_state, unit_enum_map, wall_location, game_state.ARENA_SIZE, right=right
         )
 
-        # Build demolishers 1 tile behind
-        dem_y = location[1] - 1
-        dem_x = 14 + dem_y  # Start from the right-most possible place for this row
-        while not game_state.can_spawn(unit_enum_map["DEMOLISHER"], [dem_x, dem_y]):
-            dem_x -= 1  # Find a suitable place to stack (iteratively go left)
-
-        dem_num = 0
+        # Build as many demolishers as possible at dem_location
         for _ in range(game_state.number_affordable(unit_enum_map["DEMOLISHER"])):
             dem_num += game_state.attempt_spawn(
-                unit_enum_map["DEMOLISHER"], [dem_x, dem_y]
+                unit_enum_map["DEMOLISHER"], dem_location
             )
 
         # TODO - Delete walls that allow us to enter regions
-
-        if wall_num == 0 or dem_num == 0:
-            return False
-
-        return True
