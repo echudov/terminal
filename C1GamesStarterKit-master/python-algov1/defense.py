@@ -28,9 +28,9 @@ class Defense:
         self.coordinate_regions = np.full(shape=(28, 14), fill_value=-1)
         self.history = []
         self.units = {
-            unit_enum_map["TURRET"]: set(),
-            unit_enum_map["FACTORY"]: set(),
-            unit_enum_map["WALL"]: set(),
+            unit_enum_map["TURRET"]: [],
+            unit_enum_map["FACTORY"]: [],
+            unit_enum_map["WALL"]: [],
         }
 
     def create_our_regions(self, unit_enum_map: dict):
@@ -224,9 +224,9 @@ class Defense:
         ]
         # resets units
         self.units = {
-            unit_enum_map["TURRET"]: set(),
-            unit_enum_map["FACTORY"]: set(),
-            unit_enum_map["WALL"]: set(),
+            unit_enum_map["TURRET"]: [],
+            unit_enum_map["FACTORY"]: [],
+            unit_enum_map["WALL"]: [],
         }
 
         for i, region in self.regions.items():
@@ -237,7 +237,7 @@ class Defense:
             region.calculate_region_states(unit_enum_map, units)
 
         for x in range(game_state.ARENA_SIZE):
-            for y in range(game_state.HALF_ARENA):
+            for y in range(game_state.HALF_ARENA * self.player_id, game_state.HALF_ARENA * (1 + self.player_id)):
                 if not game_state.game_map.in_arena_bounds((x, y)):
                     continue
                 unit = game_state.game_map[x, y]
@@ -249,7 +249,8 @@ class Defense:
                     or unit.unit_type == unit_enum_map["TURRET"]
                     or unit.unit_type == unit_enum_map["FACTORY"]
                 ):
-                    self.units[unit.unit_type] = unit
+                    self.units[unit.unit_type].append(unit)
+        gamelib.util.debug_write(self.units)
 
     def get_defense_undefended_tiles(self):
         """

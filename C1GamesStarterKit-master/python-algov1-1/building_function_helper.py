@@ -93,4 +93,4 @@ def demolisher_location_helper(
     most_conc_half = left_right_half_counter.most_common(1)[0]
     left_half_more_conc = True if most_conc_half == "LEFT" else False
 
-    return (highest_concentration_y, left_half_more_conc)
+    return highest_concentration_y, left_half_more_conc
