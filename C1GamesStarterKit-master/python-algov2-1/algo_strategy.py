@@ -81,6 +81,8 @@ class AlgoStrategy(gamelib.AlgoCore):
     SCOUT_DANGER_THRESHOLD = 20
     # ABSOLUTE TURRET MAX
     REGION_TURRET_MAX_ABS = 9
+    # EQUIVALENCE FOR TURRET TO SCOUT
+    TURRET_TO_SCOUT_RATIO = 5
 
     def __init__(self):
         super().__init__()
@@ -479,7 +481,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         @param game_state: Game State
         @param coord: (x, y) to place the turrets near
         """
-        if len(self.our_defense.regions[self.our_defense.get_region(coord)].units[self.UNIT_ENUM_MAP["TURRET"]]) > self.REGION_TURRET_MAX_ABS:
+        region = self.our_defense.get_region(coord)
+        if len(self.our_defense.regions[region].units[self.UNIT_ENUM_MAP["TURRET"]]) > self.REGION_TURRET_MAX_ABS:
             return
         for potential_turret in game_state.game_map.get_locations_in_range(
             coord, radius=2
@@ -628,7 +631,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         ):
             if (
                 any(
-                    self.our_defense.regions[i].states["TURRET COUNT"] < 4
+                    self.our_defense.regions[i].states["TURRET COUNT"] < game_state.get_resource(1, 1) / self.TURRET_TO_SCOUT_RATIO
                     for i in regions_to_consider
                 )
                 or game_state.get_resource(1, 1) > self.SCOUT_DANGER_THRESHOLD

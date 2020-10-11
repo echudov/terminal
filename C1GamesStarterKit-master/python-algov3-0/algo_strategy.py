@@ -491,7 +491,14 @@ class AlgoStrategy(gamelib.AlgoCore):
         @param game_state: Game State
         @param coord: (x, y) to place the turrets near
         """
-        if len(self.our_defense.regions[self.our_defense.get_region(coord)].units[self.UNIT_ENUM_MAP["TURRET"]]) > self.REGION_TURRET_MAX_ABS:
+        if (
+            len(
+                self.our_defense.regions[self.our_defense.get_region(coord)].units[
+                    self.UNIT_ENUM_MAP["TURRET"]
+                ]
+            )
+            > self.REGION_TURRET_MAX_ABS
+        ):
             return
         for potential_turret in game_state.game_map.get_locations_in_range(
             coord, radius=2
@@ -594,7 +601,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         t0 = time.time()
         open_region = False
         if any(
-            self.their_defense.regions[i].states["TURRET COUNT"] == 0
+            self.their_defense.regions[i].states["TURRET COUNT"] < 0
             for i in regions_to_consider
         ):
             open_region = True
