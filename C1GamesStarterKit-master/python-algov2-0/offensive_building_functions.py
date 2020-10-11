@@ -121,7 +121,7 @@ class OffensiveDemolisherLine:
             right (bool): Whether to build the walls towards the right (or left)
         """
 
-        # Build a full line towards right of location (might overflow but fine)
+        # Build num_walls line towards right of location (might overflow but fine)
         placed_wall_locs = DefensiveWallStrat().build_h_wall_line(
             game_state, unit_enum_map, wall_location, num_walls, right=right
         )
@@ -136,8 +136,8 @@ class OffensiveDemolisherLine:
             dem_location[1] -= 1
             path = game_state.find_path_to_edge(dem_location)
 
-        # Build as many demolishers as possible at dem_location
-        for _ in range(min(num_demolishers, game_state.number_affordable(unit_enum_map["DEMOLISHER"]))):
+        # Build num_demolishers demolishers
+        for _ in range(num_demolishers):
             game_state.attempt_spawn(unit_enum_map["DEMOLISHER"], dem_location)
 
         # Mark all recently placed walls for deletion to not block our units/structures later

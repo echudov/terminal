@@ -102,7 +102,7 @@ def demolisher_location_helper(
 
 
 def coordinate_path_location_helper(
-    game_state: GameState, desired_coordinates: [[int]], paths=None
+    game_state: GameState, desired_coordinates: [[int]], paths: [[int]] = None
 ):
     """Returns a VALID spawn location such that a mobile unit will pass at least once through the given coordinates. Useful for routing units through a specific region.
     Returns None if impossible.
@@ -110,6 +110,7 @@ def coordinate_path_location_helper(
     Args:
         game_state: The current GameState object
         desired_coordinates: Try to route the unit through at least one of these coordinates
+        paths: Optional: Use the given paths instead of calculating it here
 
     Returns:
         spawn_location (int, int): Location to spawn, or None
@@ -153,6 +154,7 @@ def coordinate_path_location_helper(
                         break
     return loc
 
+
 def find_paths_through_coordinates(paths: list, desired_coordinates: [[]]):
     """
     Finds all of the possible paths that go through the desired coordinates at least once
@@ -160,6 +162,7 @@ def find_paths_through_coordinates(paths: list, desired_coordinates: [[]]):
     @param desired_coordinates: coordinates to consider
     @return: list of satisfying paths
     """
+
     valid_paths = []
     for path in paths:
         found = False
@@ -172,4 +175,5 @@ def find_paths_through_coordinates(paths: list, desired_coordinates: [[]]):
                     valid_paths.append(path)
                     found = True
                     break
+
     return valid_paths
