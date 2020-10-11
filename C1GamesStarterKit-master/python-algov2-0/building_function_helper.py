@@ -154,6 +154,12 @@ def coordinate_path_location_helper(
     return loc
 
 def find_paths_through_coordinates(paths: list, desired_coordinates: [[]]):
+    """
+    Finds all of the possible paths that go through the desired coordinates at least once
+    @param paths: paths to consider
+    @param desired_coordinates: coordinates to consider
+    @return: list of satisfying paths
+    """
     valid_paths = []
     for path in paths:
         found = False

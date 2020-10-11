@@ -541,6 +541,10 @@ class AlgoStrategy(gamelib.AlgoCore):
         return filtered
 
     def reinforce_most_attacked_region(self, game_state):
+        """
+        Logic to find and reinforce the region that was attacked most last turn
+        @param game_state: Game State
+        """
         attacked_region = None
         max_attacks = 0
         for i in range(6):
@@ -574,6 +578,11 @@ class AlgoStrategy(gamelib.AlgoCore):
             self.place_turrets_near_edge(game_state, loc)
 
     def place_turrets_near_edge(self, game_state: gamelib.GameState, coord):
+        """
+        Places turrets near a breach edge at radius 2 apart
+        @param game_state: Game State
+        @param coord: (x, y) to place the turrets near
+        """
         for potential_turret in game_state.game_map.get_locations_in_range(
                 coord, radius=2
         ):
@@ -602,6 +611,11 @@ class AlgoStrategy(gamelib.AlgoCore):
                     )
 
     def calculate_all_possible_endpoints(self, game_state: gamelib.GameState):
+        """
+        Calculates all possible endpoints of an enemy's spawn
+        @param game_state: Game State
+        @return: list of unique endpoints
+        """
         endpoints = set()
         for coord in self.their_defense.spawn_coordinates:
             path = game_state.find_path_to_edge(coord)
@@ -610,6 +624,10 @@ class AlgoStrategy(gamelib.AlgoCore):
         return list(endpoints)
 
     def defend_against_potential_barrage(self, game_state: gamelib.GameState):
+        """
+        Defends against a potential barrage of troops by putting interceptors close to the edge
+        @param game_state: Game State
+        """
         enemy_mp = game_state.get_resource(1, 1)
         interceptors_to_place = min(game_state.get_resource(1, 0),
                                     int(math.floor(self.SCOUT_INTERCEPTOR_COUNTER_COST_RATIO * enemy_mp)))
@@ -636,6 +654,10 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.our_attacks[-1].attack_type = "INTERCEPTOR DEFENSE"
 
     def deal_with_blockade(self, game_state: gamelib.GameState):
+        """
+        Deals with blockades that we encountered last round by destroying the buildings to the left and right
+        @param game_state: Game State
+        """
         for coord in self.our_self_destructs:
             if coord[1] > 12:
                 continue
@@ -648,6 +670,11 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.our_self_destructs = set()
 
     def spam_demolisher_line(self, game_state, concentrated_frontal_area):
+        """
+        Spams a line of demolishers
+        @param game_state: Game State
+        @param concentrated_frontal_area: Concentrated Frontal Area object
+        """
         # Target that frontal area (row + left/right half)
 
         y_coord = concentrated_frontal_area[0]
@@ -684,6 +711,12 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.our_attacks[-1].attack_type = "DEMOLISHER LINE"
 
     def execute_attack_strategy(self, game_state, regions_to_consider):
+        """
+        Logic for executing the attack strategy
+        @todo MAKE THE STRATEGY MORE DYNAMIC
+        @param game_state: Game State
+        @param regions_to_consider: Which regions to consider
+        """
         # find the weakest region to use in calculations
         open_region = False
         if any(self.our_defense.regions[i].states["TURRET COUNT"] == 0 for i in regions_to_consider):
@@ -740,7 +773,8 @@ class AlgoStrategy(gamelib.AlgoCore):
             self.spam_demolisher_line(game_state, concentrated_frontal_area)
         if game_state.get_resource(1, 0) > 5:
             self.demolisher_interceptor_pairs(game_state, weakest_region_boundary, all_possible_paths, interceptors=2)
-
+        else:
+            self.defend_strategically_with_interceptors(game_state)
 
     def saving_up_for_barrage(self, game_state):
         """
@@ -753,6 +787,13 @@ class AlgoStrategy(gamelib.AlgoCore):
                     self.BARRAGE_TURN_SCALING * game_state.turn_number))
 
     def demolisher_interceptor_pairs(self, game_state, boundary, paths, interceptors=2):
+        """
+        Function to build a pair of demolishers/interceptors on the same coordinate
+        @param game_state: Game State
+        @param boundary: Boundary of the region we want to enter
+        @param paths: all possible paths to consider
+        @param interceptors: quantity of interceptors to demolishers
+        """
         pairs = int(game_state.get_resource(1, 0) / (3 + interceptors))
         loc = self.find_and_spawn_units(game_state, boundary, paths, "DEMOLISHER", pairs)
         if loc is None:
@@ -763,6 +804,15 @@ class AlgoStrategy(gamelib.AlgoCore):
         # self.our_attacks[-1].total_cost +=
 
     def find_and_spawn_units(self, game_state, region_boundary, possible_paths, unit_type, num):
+        """
+        Finds best location to spawn units and spawns them
+        @param game_state: Game State
+        @param region_boundary: boundary of the region we want
+        @param possible_paths: all the paths to consider
+        @param unit_type: unit type from self.UNIT_ENUM_MAP
+        @param num: number of units
+        @return: Best location to spawn (none if none exist)
+        """
         viable_paths = find_paths_through_coordinates(paths=possible_paths, desired_coordinates=region_boundary)
         best_path, dmg = self.least_damage_path(game_state, viable_paths)
         if best_path is not None:
@@ -774,6 +824,7 @@ class AlgoStrategy(gamelib.AlgoCore):
             return best_path[0]
         else:
             None
+
 if __name__ == "__main__":
     algo = AlgoStrategy()
     algo.start()
