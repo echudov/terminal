@@ -1014,12 +1014,10 @@ class AlgoStrategy(gamelib.AlgoCore):
             wall_loc = (turret.x, turret.y + 1)
             game_state.attempt_spawn(WALL, wall_loc)
 
-        # 6 Interceptors on defense
-        attack_cost = 0
-        attack_cost += game_state.attempt_spawn(INTERCEPTOR, [10, 3], num=3)
-        attack_cost += game_state.attempt_spawn(INTERCEPTOR, [17, 3], num=3)
+        # Pass 6 interceptors through weakest region
+        self.defend_strategically_with_interceptors(game_state)
 
-        self.our_attacks[-1].total_cost = attack_cost
+        self.our_attacks[-1].total_cost = 6
         self.our_attacks[-1].attack_type = "INTERCEPTOR DEFENSE"
 
 
