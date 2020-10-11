@@ -172,14 +172,14 @@ class Region:
         if finish[0] < start[0]:
             start, finish = finish, start
 
-        # if the line is horizontal
+        # if the line is vertical
         if start[0] == finish[0]:
             return [
                 (start[0], min(start[1], finish[1]) + i)
                 for i in range(abs(finish[1] - start[1]) + 1)
             ]
 
-        # line is vertical
+        # line is horizontal
         if start[1] == finish[1]:
             return [
                 (min(start[0], finish[0]) + i, start[1])
@@ -487,7 +487,9 @@ class Region:
         #     unit: self.simulate_average_damage(unit_enum_map, unit) for unit in units
         # }
 
-    def calculate_optimal_turret_placement(self, unit_enum_map: dict, potential_locations=None) -> (int, int):
+    def calculate_optimal_turret_placement(
+        self, unit_enum_map: dict, potential_locations=None
+    ) -> (int, int):
         """
         Calculates optimal placement of turret based on the current region state.
         @param unit_enum_map: map describing the enumerations for each unit
@@ -578,7 +580,9 @@ class Region:
         """
 
         if not self.states["UNDEFENDED TILES"]:
-            optimal = self.calculate_optimal_turret_placement(unit_enum_map, potential_locations=self.states["UNDEFENDED TILES"])
+            optimal = self.calculate_optimal_turret_placement(
+                unit_enum_map, potential_locations=self.states["UNDEFENDED TILES"]
+            )
             game_state.attempt_spawn(
                 unit_type=unit_enum_map["TURRET"], locations=optimal
             )
@@ -592,7 +596,9 @@ class Region:
             self.units[unit_enum_map["WALL"]]
         ):
             # Place more walls near turrets
-            self.place_walls_near_turrets(game_state, unit_enum_map, upgrade=upgrade, count=3)
+            self.place_walls_near_turrets(
+                game_state, unit_enum_map, upgrade=upgrade, count=3
+            )
 
         if len(self.units[unit_enum_map["TURRET"]]) <= 1:
             optimal = self.calculate_optimal_turret_placement(unit_enum_map)

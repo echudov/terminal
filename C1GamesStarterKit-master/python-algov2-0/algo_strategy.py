@@ -67,12 +67,12 @@ class AlgoStrategy(gamelib.AlgoCore):
     DEPRIORITIZE_FACTORY_SP_PERCENT = 0.3
     # Enforced to not choose a spawn loc resulting in too short of a path
     MIN_PATH_LENGTH = 5
-    # If breached, SP threshold to place a second turret
+    # If breached, SP minumum threshold to place a second turret
     DOUBLE_TURRET_THRESHOLD = 10
-    # When to be worried about scouts by what fraction of their MP the enemy saved
-    ENEMY_SAVING_FOR_BARRAGE = 1.5
+    # Min threshold to assume enemy is saving for a barrage as ratio of MP (lastturn/thisturn)
+    ENEMY_SAVING_FOR_BARRAGE = 1.5  # eg. 1.5 is 150%
     # Testing arbitrary scaling number for when they have too much MP to know what to do with
-    BARRAGE_TURN_SCALING = 1.3
+    BARRAGE_TURN_SCALING = 1.3  # In later turns, start to get more MP
     # How much of the enemy's scout cost to spend on interceptors
     SCOUT_INTERCEPTOR_COUNTER_COST_RATIO = 0.5
     # Turn to consider the back region as a weak region
@@ -148,7 +148,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Refresh meta-info
         self.health_diff = health_differential(game_state)
         self.enemy_resource_history.append(
-            (game_state.get_resource(1, 0), game_state.get_resource(1, 1))
+            (game_state.get_resource(0, 1), game_state.get_resource(1, 1))
         )
         # Updating internal Defense values
         self.our_defense.update_defense(self.UNIT_ENUM_MAP, game_state)
@@ -551,7 +551,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         # find the weakest region to use in calculations
         open_region = False
         if any(
-            self.our_defense.regions[i].states["TURRET COUNT"] == 0
+            self.their_defense.regions[i].states["TURRET COUNT"] == 0
             for i in regions_to_consider
         ):
             open_region = True
@@ -607,7 +607,7 @@ class AlgoStrategy(gamelib.AlgoCore):
                 or game_state.get_resource(1, 1) > self.SCOUT_DANGER_THRESHOLD
             ):
                 self.defend_against_potential_barrage(game_state)
-                self.find_and_spawn_units(
+                self.spawn_units_least_damage_path(
                     game_state,
                     weakest_region_boundary,
                     all_possible_paths,
@@ -721,7 +721,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
 
         pairs = int(game_state.get_resource(1, 0) / (3 + interceptors))
-        loc = self.find_and_spawn_units(
+        loc = self.spawn_units_least_damage_path(
             game_state, boundary, paths, "DEMOLISHER", pairs
         )
         if loc is None:
@@ -734,8 +734,13 @@ class AlgoStrategy(gamelib.AlgoCore):
         gamelib.util.debug_write(spawned)
         # self.our_attacks[-1].total_cost +=
 
-    def find_and_spawn_units(
-        self, game_state, region_boundary, possible_paths, unit_type, num
+    def spawn_units_least_damage_path(
+        self,
+        game_state: GameState,
+        region_boundary,
+        possible_paths,
+        unit_type: str,
+        num: int,
     ):
         """
         Finds best location to spawn units and spawns them

@@ -234,14 +234,14 @@ class Defense:
         if finish[0] < start[0]:
             start, finish = finish, start
 
-        # if the line is horizontal
+        # if the line is vertical
         if start[0] == finish[0]:
             return [
                 (start[0], min(start[1], finish[1]) + i)
                 for i in range(abs(finish[1] - start[1]) + 1)
             ]
 
-        # line is vertical
+        # line is horizontal
         if start[1] == finish[1]:
             return [
                 (min(start[0], finish[0]) + i, start[1])
