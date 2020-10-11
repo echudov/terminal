@@ -430,8 +430,7 @@ class AlgoStrategy(gamelib.AlgoCore):
                 num_interceptors,
                 interceptor_loc,
             )
-
-        self.our_attacks[-1].total_cost += num_interceptors
+            self.our_attacks[-1].total_cost += num_interceptors
 
     def reinforce_most_attacked_region(self, game_state: GameState):
         """
@@ -685,12 +684,12 @@ class AlgoStrategy(gamelib.AlgoCore):
             gamelib.util.debug_write("DEALING WITH CONCENTRATED FRONTAL AREA")
             t0 = time.time()
             # Target that frontal area (row + left/right half)
-            self.spam_demolisher_line(game_state, concentrated_frontal_area)
-            self.our_attacks[-1].attack_type = "DEMOLISHER LINE"
-            gamelib.util.debug_write(
-                "TIME FOR DEMOLISHER LINE: " + str(time.time() - t0)
-            )
-            return
+            if self.spam_demolisher_line(game_state, concentrated_frontal_area):
+                self.our_attacks[-1].attack_type = "DEMOLISHER LINE"
+                gamelib.util.debug_write(
+                    "TIME FOR DEMOLISHER LINE: " + str(time.time() - t0)
+                )
+                return
 
         if game_state.get_resource(1, 0) > 5:
             gamelib.util.debug_write("DEFAULTING TO DEMOLISHER INTERCEPTOR PAIRS")
@@ -702,13 +701,13 @@ class AlgoStrategy(gamelib.AlgoCore):
                 "TIME TO PLACE DEM INT PAIRS: " + str(time.time() - t0)
             )
             self.our_attacks[-1].attack_type = "DEMOLISHER INTERCEPTOR"
-        else:
-            gamelib.util.debug_write("DEFENDING STRATEGICALLY WITH INTERCEPTORS")
-            t0 = time.time()
-            self.defend_strategically_with_interceptors(game_state)
-            gamelib.util.debug_write(
-                "DEFENDED STRATEGICALLY WITH INTERCEPTORS IN: " + str(time.time() - t0)
-            )
+
+        gamelib.util.debug_write("DEFENDING STRATEGICALLY WITH INTERCEPTORS")
+        t0 = time.time()
+        self.defend_strategically_with_interceptors(game_state)
+        gamelib.util.debug_write(
+            "DEFENDED STRATEGICALLY WITH INTERCEPTORS IN: " + str(time.time() - t0)
+        )
 
     def calculate_all_possible_endpoints(self, game_state: gamelib.GameState):
         """
@@ -776,6 +775,13 @@ class AlgoStrategy(gamelib.AlgoCore):
             demolisher_y_coord = wall_y_coord - 1
 
         num_demolishers = math.floor(game_state.number_affordable(DEMOLISHER))
+        if game_state.game_map[demolisher_x_coord, demolisher_y_coord]:
+            game_state.attempt_remove([demolisher_x_coord, demolisher_y_coord])
+            return False
+        gamelib.util.debug_write(
+            "TRYING TO PLACE DEMOLISHERS AT: "
+            + str([demolisher_x_coord, demolisher_y_coord])
+        )
         OffensiveDemolisherLine().build_demolisher_line(
             game_state,
             self.UNIT_ENUM_MAP,
@@ -787,6 +793,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         )
         self.our_attacks[-1].total_cost += 3 * num_demolishers
         self.our_attacks[-1].attack_type = "DEMOLISHER LINE"
+        return True
 
     def demolisher_interceptor_pairs(self, game_state, boundary, paths, interceptors=2):
         """
@@ -800,9 +807,12 @@ class AlgoStrategy(gamelib.AlgoCore):
         pairs = int(game_state.get_resource(1, 0) / (3 + interceptors))
         if pairs < 1:
             return
+        gamelib.util.debug_write("CALCULATING LEAST DAMAGE PATH")
+        t0 = time.time()
         loc = self.spawn_units_least_damage_path(
             game_state, boundary, paths, "DEMOLISHER", pairs
         )
+        gamelib.util.debug_write("CALCULATED IN: " + str(time.time() - t0))
         if loc is None:
             return
         spawned = game_state.attempt_spawn(
@@ -827,7 +837,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         @param num: number of units
         @return: Best location to spawn (none if none exist)
         """
-
+        if num < 1:
+            return None
         # From all possible paths, find the one with least theoretical damage to our units
         viable_paths = find_paths_through_coordinates(
             paths=possible_paths, desired_coordinates=region_boundary
