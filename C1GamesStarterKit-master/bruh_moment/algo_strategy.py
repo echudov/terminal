@@ -84,7 +84,7 @@ class AlgoStrategy(gamelib.AlgoCore):
     # EQUIVALENCE FOR TURRET TO SCOUT
     TURRET_TO_SCOUT_RATIO = 5
     # THRESHOLD FOR EVALUATING IF AN ATTACK IS GOOD QUALITY
-    ATTACK_QUALITY_THRESHOLD = 50
+    ATTACK_QUALITY_THRESHOLD = 75
     # ROUNDS PER ADDITIONAL TURRET TO TACKLE
     ROUNDS_PER_TURRET = 7
 
@@ -732,12 +732,13 @@ class AlgoStrategy(gamelib.AlgoCore):
             )
             best_path, dmg = self.least_damage_path(game_state, viable_paths)
             scouts_spawnable = game_state.number_affordable(self.UNIT_ENUM_MAP["SCOUT"])
-            if (repeated_attack != "OPEN DEMOLISHER INTERCEPTOR" or last_successful) and scouts_spawnable - dmg > 8:
-                self.our_attacks[-1].total_cost += game_state.attempt_spawn(self.UNIT_ENUM_MAP["SCOUT"], loc=list(best_path[0]), num=scouts_spawnable)
+            if (repeated_attack != "SCOUT SPAM" or last_successful) and scouts_spawnable - dmg > 8:
+                gamelib.util.debug_write("SCOUT SPAM STRATEGY")
+                self.our_attacks[-1].total_cost += game_state.attempt_spawn(self.UNIT_ENUM_MAP["SCOUT"], locations=list(best_path[0]), num=scouts_spawnable)
                 self.our_attacks[-1].attack_type = "SCOUT SPAM"
                 return
 
-            if repeated_attack != "OPEN DEMOLISHER INTERCEPTOR":
+            if repeated_attack != "OPEN DEMOLISHER INTERCEPTOR" or last_successful:
                 gamelib.util.debug_write("DEMOLISHER INTERCEPTOR PAIR")
                 t0 = time.time()
                 self.demolisher_interceptor_pairs(

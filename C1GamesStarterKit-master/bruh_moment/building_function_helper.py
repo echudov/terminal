@@ -9,7 +9,7 @@ from gamelib.game_map import GameMap
 # CONSTANTS
 
 # Fraction of turrets in first 3 rows to be considered "concentrated"
-MIN_FRONT_TURRET_DENSITY = 0.80
+MIN_FRONT_TURRET_DENSITY = 0.65
 FACTORY_ROW_MAX = 6  # Stops building factories once we hit this row
 # Enforced to not choose a spawn loc resulting in too short of a path
 MIN_PATH_LENGTH = 5
