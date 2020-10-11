@@ -111,6 +111,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         unit deployments, and transmitting your intended deployments to the
         game engine.
         """
+
         game_state = gamelib.GameState(self.config, turn_state)
         gamelib.debug_write(
             "Performing turn {} of your custom algo strategy".format(
@@ -138,7 +139,7 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # Perform moves - MAIN ENTRY POINT
         self.choose_and_execute_strategy(game_state, turn_state)
-
+        self.scored_on_locations = []
         game_state.submit_turn()  # Must be called at the end
 
     #####################################################################
