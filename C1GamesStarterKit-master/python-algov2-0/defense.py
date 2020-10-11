@@ -33,6 +33,7 @@ class Defense:
         self.coordinate_regions = np.full(shape=(28, 14), fill_value=-1)
         self.grid_type = np.full(shape=self.coordinate_regions.shape, fill_value=-1)
         self.initialize_coordinate_regions()
+        self.spawn_coordinates = []
         self.initialize_grid()
         self.history = []
         self.units = {
@@ -270,15 +271,11 @@ class Defense:
                 if self.coordinate_regions[x, y] != -1:
                     self.grid_type[x, y] = 1
         if self.player_id == 0:
-            for coord in self.edge_coordinates([[0, 13], [13, 0]]):
-                self.grid_type[coord] = 0
-            for coord in self.edge_coordinates([[14, 0], [27, 13]]):
-                self.grid_type[coord] = 0
+            self.spawn_coordinates = self.edge_coordinates([[0, 13], [13, 0]]) + self.edge_coordinates([[14, 0], [27, 13]])
         else:
-            for coord in self.edge_coordinates([[0, 14], [13, 27]]):
-                self.grid_type[self.offset_coord(coord)] = 0
-            for coord in self.edge_coordinates([[14, 27], [27, 14]]):
-                self.grid_type[self.offset_coord(coord)] = 0
+            self.spawn_coordinates = self.edge_coordinates([[0, 14], [13, 27]]) + self.edge_coordinates([[14, 27], [27, 14]])
+        for coord in self.spawn_coordinates:
+            self.grid_type[self.offset_coord(coord)] = 0
 
     def update_defense(self, unit_enum_map: dict, game_state: gamelib.GameState):
         """
@@ -462,6 +459,16 @@ class Defense:
                     min_id = reg_id
             return min_id
 
+        if criteria == "TURRET COUNT":
+            min_turrets = 1000
+            min_id = 0
+            for reg_id in regions_to_consider:
+                turret_count = self.regions[reg_id].states["TURRET COUNT"]
+                if turret_count < min_turrets:
+                    min_id = reg_id
+                    min_turrets = turret_count
+            return min_id, min_turrets
+
     def build_corners(self, game_state, unit_enum_map):
         for i in range(4):
             if game_state.can_spawn(unit_enum_map["WALL"], location=[i, 13]):
@@ -575,6 +582,13 @@ class Defense:
             self.regions[weakest_region].fortify_region_defenses(
                 game_state, unit_enum_map
             )
+            if game_state.get_resource(0, 0) > 75:
+                for unit in self.units[unit_enum_map["TURRET"]]:
+                    if not unit.upgraded:
+                        game_state.attempt_upgrade([unit.x, unit.y])
+                for unit in self.units[unit_enum_map["WALL"]]:
+                    if not unit.upgraded:
+                        game_state.attempt_upgrade([unit.x, unit.y])
             # IF WE HAVE TIME REFACTOR THIS TO BE MORE EFFICIENT BY UPDATING ONLY ON WHAT CHANGED
             # RIGHT NOW I THINK WE HAVE THE TIME TO SPARE THOUGH
             # IMPORTANT TO NOT NEGLECT THOUGH IF WE RUN INTO COMPUTATIONAL TIME CONSTRAINTS

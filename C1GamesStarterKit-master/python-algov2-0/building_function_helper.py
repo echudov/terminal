@@ -102,7 +102,7 @@ def demolisher_location_helper(
 
 
 def coordinate_path_location_helper(
-    game_state: GameState, desired_coordinates: [[int]]
+    game_state: GameState, desired_coordinates: [[int]], paths=None
 ):
     """Returns a VALID spawn location such that a mobile unit will pass at least once through the given coordinates. Useful for routing units through a specific region.
     Returns None if impossible.
@@ -123,23 +123,47 @@ def coordinate_path_location_helper(
     possible_spawn_locs = g_map.get_edge_locations(
         g_map.BOTTOM_LEFT
     ) + g_map.get_edge_locations(g_map.BOTTOM_RIGHT)
-    for spawn_loc in possible_spawn_locs:
-        path = game_state.find_path_to_edge(spawn_loc)
 
-        # Starting point was blocked by stationary unit
-        if path is None:
-            continue
+    if paths is None:
+        for spawn_loc in possible_spawn_locs:
+            path = game_state.find_path_to_edge(spawn_loc)
 
-        # Path needs to be of some decent length (don't just wander in our base and die)
-        if len(path) < MIN_PATH_LENGTH:
-            continue
+            # Starting point was blocked by stationary unit
+            if path is None:
+                continue
 
-        # Need to do this ugly hack because "path" is not hashable
-        for coord in desired_coordinates:
-            for path_coord in path:
+            # Path needs to be of some decent length (don't just wander in our base and die)
+            if len(path) < MIN_PATH_LENGTH:
+                continue
+
+            # Need to do this ugly hack because "path" is not hashable
+            for coord in desired_coordinates:
+                for path_coord in path:
+                    if coord[0] == path_coord[0] and coord[1] == path_coord[1]:
+                        # This path goes through the desired coordinates at least once
+                        loc = path[0]
+                        break
+    else:
+        for path in paths:
+            for coord in desired_coordinates:
+                for path_coord in path:
+                    if coord[0] == path_coord[0] and coord[1] == path_coord[1]:
+                        # This path goes through the desired coordinates at least once
+                        loc = path[0]
+                        break
+    return loc
+
+def find_paths_through_coordinates(paths: list, desired_coordinates: [[]]):
+    valid_paths = []
+    for path in paths:
+        found = False
+        for path_coord in path:
+            if found:
+                break
+            for coord in desired_coordinates:
                 if coord[0] == path_coord[0] and coord[1] == path_coord[1]:
                     # This path goes through the desired coordinates at least once
-                    loc = path[0]
+                    valid_paths.append(path)
+                    found = True
                     break
-
-    return loc
+    return valid_paths

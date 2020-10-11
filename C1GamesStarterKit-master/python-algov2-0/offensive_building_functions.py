@@ -106,8 +106,8 @@ class OffensiveDemolisherLine:
         unit_enum_map: dict,
         num_demolishers: int,
         num_walls: int,
-        wall_location: (int, int) or [int],
-        dem_location: (int, int) or [int],
+        wall_location: (int, int) or [int, int],
+        dem_location: (int, int) or [int, int],
         right: bool = True,
     ) -> bool:
         """Builds a line of walls starting at the given location and stacked demolishers 1 tile back
@@ -137,7 +137,7 @@ class OffensiveDemolisherLine:
             path = game_state.find_path_to_edge(dem_location)
 
         # Build as many demolishers as possible at dem_location
-        for _ in range(game_state.number_affordable(unit_enum_map["DEMOLISHER"])):
+        for _ in range(min(num_demolishers, game_state.number_affordable(unit_enum_map["DEMOLISHER"]))):
             game_state.attempt_spawn(unit_enum_map["DEMOLISHER"], dem_location)
 
         # Mark all recently placed walls for deletion to not block our units/structures later

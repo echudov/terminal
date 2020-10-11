@@ -6,6 +6,7 @@ import math
 import warnings
 from sys import maxsize
 import json
+import time
 
 from attack import Attack
 
@@ -27,6 +28,7 @@ from building_function_helper import (
     factory_location_helper,
     demolisher_location_helper,
     coordinate_path_location_helper,
+    find_paths_through_coordinates
 )
 
 from defense import Defense
@@ -67,6 +69,17 @@ class AlgoStrategy(gamelib.AlgoCore):
     MIN_PATH_LENGTH = 5
     # If breached, SP threshold to place a second turret
     DOUBLE_TURRET_THRESHOLD = 10
+    # When to be worried about scouts by what fraction of their MP the enemy saved
+    ENEMY_SAVING_FOR_BARRAGE = 1.5
+    # Testing arbitrary scaling number for when they have too much MP to know what to do with
+    BARRAGE_TURN_SCALING = 1.3
+    # How much of the enemy's scout cost to spend on interceptors
+    SCOUT_INTERCEPTOR_COUNTER_COST_RATIO = 0.5
+    # Turn to consider the back region as a weak region
+    BACK_REGION_CONSIDERATION = 12
+    # Threshold past which scouts are dangerous
+    SCOUT_DANGER_THRESHOLD = 20
+
 
     def __init__(self):
         super().__init__()
@@ -78,8 +91,9 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.regions_attacked = [{i: 0 for i in range(6)}]
         self.our_attacks = []
         self.their_attacks = []
-        self.our_self_destructs = []
-        self.their_self_destructs = []
+        self.our_self_destructs = set()
+        self.their_self_destructs = set()
+        self.enemy_resource_history = []
         seed = random.randrange(maxsize)
         random.seed(seed)
         gamelib.debug_write("Random seed: {}".format(seed))
@@ -134,7 +148,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         # OUR TURN-DECISION-MAKING HERE
         # Refresh meta-info
         self.health_diff = health_differential(game_state)
-
+        self.enemy_resource_history.append((game_state.get_resource(1, 0), game_state.get_resource(1, 1)))
         # Updating internal Defense values
         self.our_defense.update_defense(self.UNIT_ENUM_MAP, game_state)
         self.their_defense.update_defense(self.UNIT_ENUM_MAP, game_state)
@@ -147,7 +161,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         if game_state.turn_number >= 1:
             self.regions_attacked.append({i: 0 for i in range(6)})
             self.on_action_frame(turn_state)
-        gamelib.util.debug_write(self.scored_on_locations)
+        gamelib.util.debug_write("SCORED ON LOCATIONS: " + str(self.scored_on_locations))
         self.their_attacks.append(Attack(player_id=1, attack_type="OPPONENT", cost=0))
         # Perform moves - MAIN ENTRY POINT
         self.choose_and_execute_strategy(game_state, turn_state)
@@ -178,53 +192,30 @@ class AlgoStrategy(gamelib.AlgoCore):
             self.resolve_factory_impact_diff(game_state)
 
             # Fortify regions that enemy units breached
-            attacked_region = None
-            max_attacks = 0
-            for i in range(6):
-                if self.regions_attacked[-1][i] > max_attacks:
-                    max_attacks = self.regions_attacked[-1][i]
-                    attacked_region = i
-            if attacked_region is not None:
-                self.our_defense.regions[i].fortify_region_defenses(
-                    game_state, self.UNIT_ENUM_MAP
-                )
+            self.reinforce_most_attacked_region(game_state)
+
+            # deal with blockade
+            self.deal_with_blockade(game_state)
+
+            # if there are only two or less locations the enemy can get to assume they will try to bombard us
+            # protect ourselves by placing turrets near that edge
+            possible_enemy_endpoints = self.calculate_all_possible_endpoints(game_state)
+            if len(possible_enemy_endpoints) <= 2:
+                for endpoint in possible_enemy_endpoints:
+                    self.place_turrets_near_edge(game_state, endpoint)
 
             # General defense fortification
             self.our_defense.fortify_defenses(game_state, self.UNIT_ENUM_MAP)
 
-            # Do they have many structures near their front?
-            concentrated_frontal_area = demolisher_location_helper(
-                game_state, self.UNIT_ENUM_MAP, self.their_defense.units
-            )
-            if concentrated_frontal_area is not None:
-                # Target that frontal area (row + left/right half)
-                self.spam_demolisher_line(game_state, concentrated_frontal_area)
+            # ATTACKS BELOW THIS LINE
 
+            # check to see if we should consider the back region in our evaluation of the weakest region
+            if game_state.turn_number > self.BACK_REGION_CONSIDERATION:
+                regions_to_consider = [0, 1, 2, 3, 5]
             else:
-                # Perform an interceptor spam on their weakest region
+                regions_to_consider = [0, 1, 2, 3]
 
-                # Don't care about the back regions w.r.t Undefended Tiles (it's the back)
-                w_region_id = self.their_defense.weakest_region(
-                    self.UNIT_ENUM_MAP,
-                    criteria="AVG TILE DMG",
-                    regions_to_consider=[0, 1, 2, 3, 5],
-                )
-                w_region_coords = self.their_defense.regions[w_region_id].coordinates
-
-                # Find where to place Interceptor to pass through 1 of those coords
-                interceptor_loc = coordinate_path_location_helper(
-                    game_state, w_region_coords
-                )
-                if interceptor_loc is not None:
-                    num_interceptors = math.floor(
-                        game_state.number_affordable(INTERCEPTOR)
-                    )
-                    OffensiveInterceptorSpam().build_interceptor_spam_single_loc(
-                        game_state,
-                        self.UNIT_ENUM_MAP,
-                        num_interceptors,
-                        interceptor_loc,
-                    )
+            self.execute_attack_strategy(game_state, regions_to_consider)
         else:
             # EMERGENCY CASE - Fortify immediately
 
@@ -255,7 +246,7 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # At start of game, won't have any factories
         if FACTORY not in self.units:
-            return
+            return 0
 
         # Factories we build should be a function of how many we can afford
         possible_factories = game_state.number_affordable(FACTORY)
@@ -273,7 +264,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         for factory in our_factories:
             if not factory.upgraded:
                 if num == actual_factories_int:
-                    return
+                    return 0
 
                 num += game_state.attempt_upgrade((factory.x, factory.y))
 
@@ -282,7 +273,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         for _ in range(possible_remaining):
             loc = factory_location_helper(game_state)
             if loc is None:
-                return  # Impossible to build a factory! (????)
+                return 0 # Impossible to build a factory! (????)
 
             game_state.attempt_spawn(FACTORY, loc)
 
@@ -422,9 +413,15 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # if the turn is in deploy phase
         if state["turnInfo"] == 0:
-            self.their_attacks[-1].total_cost += 1 * state["p2Units"][3] # amount of scouts on board
-            self.their_attacks[-1].total_cost += 3 * state["p2Units"][4] # amount of demolishers on board
-            self.their_attacks[-1].total_cost += 1 * state["p2Units"][5] # amount of interceptors on board
+            scouts = state["p2Units"][3]
+            demolishers = state["p2Units"][4]
+            interceptors = state["p2Units"][5]
+            if scouts > 0 and demolishers == 0 and interceptors == 0:
+                self.their_attacks[-1].attack_type = "SCOUT"
+
+            self.their_attacks[-1].total_cost += 1 * scouts # amount of scouts on board
+            self.their_attacks[-1].total_cost += 3 * demolishers # amount of demolishers on board
+            self.their_attacks[-1].total_cost += 1 * interceptors # amount of interceptors on board
 
 
         # Record which regions got attacked (had enemy units inside)
@@ -468,7 +465,7 @@ class AlgoStrategy(gamelib.AlgoCore):
                     self.our_attacks[-1].damage_dealt_to_troops += dmg
                 else:
                     self.their_attacks[-1].damage_dealt_to_troops += dmg
-
+        # record self destructs
         self_destructs = events["selfDestruct"]
         for sd in self_destructs:
             unit_owner = sd[5]
@@ -476,11 +473,11 @@ class AlgoStrategy(gamelib.AlgoCore):
             loc = sd[0]
             if unit_owner == 1:
                 self.our_attacks[-1].self_destructs.append((loc, damage))
-                self.our_self_destructs.append(loc)
+                self.our_self_destructs.add(tuple(loc))
                 self.our_attacks[-1].damage_dealt_to_defense += damage
             else:
                 self.their_attacks[-1].self_destructs.append((loc, damage))
-                self.their_self_destructs.append(loc)
+                self.their_self_destructs.add(tuple(loc))
                 self.their_attacks[-1].damage_dealt_to_defense += damage
 
     #####################################################################
@@ -511,6 +508,30 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Now just return the location that takes the least damage
         return location_options[damages.index(min(damages))]
 
+    def least_damage_path(self, game_state: gamelib.GameState, paths: list) -> (list, int):
+        """
+        Finds path that takes the least damage among the paths passed in
+        @param game_state: Game State
+        @param paths: list of potential paths
+        @return: path that takes the least amount of damage, damage taken on the path
+        """
+        least_damage = 100000000000
+        if not paths:
+            return None, least_damage
+        best_path = paths[0]
+        for path in paths:
+            damage = 0
+            for path_location in path:
+                # Get number of enemy turrets that can attack each location and multiply by turret damage
+                damage += (
+                        len(game_state.get_attackers(path_location, 0))
+                        * gamelib.GameUnit(TURRET, game_state.config).damage_i
+                )
+            if damage < least_damage:
+                best_path = path
+        return best_path, least_damage
+
+
     def filter_blocked_locations(self, locations, game_state):
         filtered = []
         for location in locations:
@@ -518,6 +539,18 @@ class AlgoStrategy(gamelib.AlgoCore):
                 filtered.append(location)
 
         return filtered
+
+    def reinforce_most_attacked_region(self, game_state):
+        attacked_region = None
+        max_attacks = 0
+        for i in range(6):
+            if self.regions_attacked[-1][i] > max_attacks:
+                max_attacks = self.regions_attacked[-1][i]
+                attacked_region = i
+        if attacked_region is not None:
+            self.our_defense.regions[i].fortify_region_defenses(
+                game_state, self.UNIT_ENUM_MAP
+            )
 
     def reinforce_after_breach(self, game_state: gamelib.GameState):
         """
@@ -534,13 +567,30 @@ class AlgoStrategy(gamelib.AlgoCore):
                         locations=[[i, 13], [27 - i, 13]],
                     )
             # if the unit was a scout, send interceptors to the location
-            if unit_type == self.UNIT_ENUM_MAP["SCOUT"]:
+            # 3 is the frame_state id for a scout
+            if unit_type == 3:
                 self.our_attacks[-1].total_cost += game_state.attempt_spawn(self.UNIT_ENUM_MAP["INTERCEPTOR"], locations=loc, num=5)
 
-            for potential_turret in game_state.game_map.get_locations_in_range(
-                    loc, radius=2
+            self.place_turrets_near_edge(game_state, loc)
+
+    def place_turrets_near_edge(self, game_state: gamelib.GameState, coord):
+        for potential_turret in game_state.game_map.get_locations_in_range(
+                coord, radius=2
+        ):
+            if game_state.can_spawn(
+                    self.UNIT_ENUM_MAP["TURRET"], location=potential_turret
             ):
-                gamelib.util.debug_write(potential_turret)
+                game_state.attempt_spawn(
+                    self.UNIT_ENUM_MAP["TURRET"], locations=potential_turret
+                )
+                game_state.attempt_upgrade(
+                    locations=potential_turret
+                )
+                break
+        if game_state.get_resource(0, 0) >= self.DOUBLE_TURRET_THRESHOLD:
+            for potential_turret in game_state.game_map.get_locations_in_range(
+                    coord, radius=2
+            ):
                 if game_state.can_spawn(
                         self.UNIT_ENUM_MAP["TURRET"], location=potential_turret
                 ):
@@ -550,21 +600,52 @@ class AlgoStrategy(gamelib.AlgoCore):
                     game_state.attempt_upgrade(
                         locations=potential_turret
                     )
-                    break
-            if game_state.get_resource(0, 0) >= self.DOUBLE_TURRET_THRESHOLD:
-                for potential_turret in game_state.game_map.get_locations_in_range(
-                        loc, radius=2
-                ):
-                    gamelib.util.debug_write(potential_turret)
-                    if game_state.can_spawn(
-                            self.UNIT_ENUM_MAP["TURRET"], location=potential_turret
-                    ):
-                        game_state.attempt_spawn(
-                            self.UNIT_ENUM_MAP["TURRET"], locations=potential_turret
-                        )
-                        game_state.attempt_upgrade(
-                            locations=potential_turret
-                        )
+
+    def calculate_all_possible_endpoints(self, game_state: gamelib.GameState):
+        endpoints = set()
+        for coord in self.their_defense.spawn_coordinates:
+            path = game_state.find_path_to_edge(coord)
+            if path is not None and path[-1][1] < 13:
+                endpoints.add(tuple(path[-1]))
+        return list(endpoints)
+
+    def defend_against_potential_barrage(self, game_state: gamelib.GameState):
+        enemy_mp = game_state.get_resource(1, 1)
+        interceptors_to_place = min(game_state.get_resource(1, 0),
+                                    int(math.floor(self.SCOUT_INTERCEPTOR_COUNTER_COST_RATIO * enemy_mp)))
+        # split only in half
+        # might also need to add the option to split in fourths if there's enough MP
+        left = [4, 9]
+        path_to_edge = game_state.find_path_to_edge(left)
+        while path_to_edge is None or len(path_to_edge) < 3:
+            left = [left[0] + 1, left[1] - 1]
+            path_to_edge = game_state.find_path_to_edge(left)
+        placed = game_state.attempt_spawn(unit_type=self.UNIT_ENUM_MAP["INTERCEPTOR"], locations=left,
+                                          num=int(interceptors_to_place / 2))
+
+        self.our_attacks[-1].total_cost += placed
+
+        right = [23, 9]
+        path_to_edge = game_state.find_path_to_edge(right)
+        while path_to_edge is None or len(path_to_edge) < 3:
+            right = [right[0] - 1, right[1] - 1]
+            path_to_edge = game_state.find_path_to_edge(right)
+
+        self.our_attacks[-1].total_cost += game_state.attempt_spawn(unit_type=self.UNIT_ENUM_MAP["INTERCEPTOR"],
+                                                              locations=right, num=int(interceptors_to_place - placed))
+        self.our_attacks[-1].attack_type = "INTERCEPTOR DEFENSE"
+
+    def deal_with_blockade(self, game_state: gamelib.GameState):
+        for coord in self.our_self_destructs:
+            if coord[1] > 12:
+                continue
+            left = self.our_defense.grid_unit[coord[0] - 1, coord[1]]
+            right = self.our_defense.grid_unit[coord[0] + 1, coord[1]]
+            if left is not None:
+                game_state.attempt_remove(locations=[left.x, left.y])
+            if right is not None:
+                game_state.attempt_remove(locations=[right.x, right.y])
+        self.our_self_destructs = set()
 
     def spam_demolisher_line(self, game_state, concentrated_frontal_area):
         # Target that frontal area (row + left/right half)
@@ -599,7 +680,100 @@ class AlgoStrategy(gamelib.AlgoCore):
             [demolisher_x_coord, demolisher_y_coord],
             x_half,
         )
+        self.our_attacks[-1].total_cost += 3 * num_demolishers
+        self.our_attacks[-1].attack_type = "DEMOLISHER LINE"
 
+    def execute_attack_strategy(self, game_state, regions_to_consider):
+        # find the weakest region to use in calculations
+        open_region = False
+        if any(self.our_defense.regions[i].states["TURRET COUNT"] == 0 for i in regions_to_consider):
+            open_region = True
+            weakest_region_id = self.their_defense.weakest_region(
+                self.UNIT_ENUM_MAP,
+                criteria="TURRET COUNT",
+                regions_to_consider=regions_to_consider,
+            )
+        else:
+            weakest_region_id = self.their_defense.weakest_region(
+                self.UNIT_ENUM_MAP,
+                criteria="AVG TILE DMG",
+                regions_to_consider=regions_to_consider,
+            )
+
+        # IMPORTANT CONSTANTS FOR IF STATEMENTS:
+        # finds the boundary of the weakest region
+        weakest_region_boundary = list(self.their_defense.regions[weakest_region_id].all_boundaries)
+        # finds all possible paths from starting coordinates
+        all_possible_paths = {tuple(coord): game_state.find_path_to_edge(coord) for coord in
+                              self.our_defense.spawn_coordinates}
+        # Removes all paths with length less than or equal to 3
+        to_delete = []
+        for coord, path in all_possible_paths.items():
+            if path is None or len(path) <= 3:
+                to_delete.append(coord)
+        [all_possible_paths.pop(coord) for coord in to_delete]
+        # All possible starting coordinates
+        all_possible_starts = [path[0] for path in all_possible_paths]
+
+        all_possible_paths = list(all_possible_paths.values())
+
+        # whether or not we have a concentrated frontal area
+        concentrated_frontal_area = demolisher_location_helper(
+            game_state, self.UNIT_ENUM_MAP, self.their_defense.units
+        )
+
+        # if the opponent seems like they're saving up to barrage us
+        if self.saving_up_for_barrage(game_state) and self.their_attacks[-1].attack_type != "SCOUTS":
+            if (any(self.our_defense.regions[i].states["TURRET COUNT"] < 4 for i in regions_to_consider)
+                    or game_state.get_resource(1, 1) > self.SCOUT_DANGER_THRESHOLD):
+                self.defend_against_potential_barrage(game_state)
+                self.find_and_spawn_units(game_state, weakest_region_boundary, all_possible_paths, "INTERCEPTOR", game_state.number_affordable(
+                                                                            self.UNIT_ENUM_MAP["INTERCEPTOR"]))
+                return
+
+        # if there's an open region, split demolisher/interceptor
+        if open_region:
+            self.demolisher_interceptor_pairs(game_state, weakest_region_boundary, all_possible_paths, interceptors=2)
+
+        if concentrated_frontal_area is not None:
+            # Target that frontal area (row + left/right half)
+            self.spam_demolisher_line(game_state, concentrated_frontal_area)
+        if game_state.get_resource(1, 0) > 5:
+            self.demolisher_interceptor_pairs(game_state, weakest_region_boundary, all_possible_paths, interceptors=2)
+
+
+    def saving_up_for_barrage(self, game_state):
+        """
+        Determines whether or not the opponent is saving up for a barrage strategy
+        @param game_state: Game State
+        @return: above statement
+        """
+        return (game_state.get_resource(1, 1) >
+                    min(self.ENEMY_SAVING_FOR_BARRAGE * self.enemy_resource_history[-1][1],
+                    self.BARRAGE_TURN_SCALING * game_state.turn_number))
+
+    def demolisher_interceptor_pairs(self, game_state, boundary, paths, interceptors=2):
+        pairs = int(game_state.get_resource(1, 0) / (3 + interceptors))
+        loc = self.find_and_spawn_units(game_state, boundary, paths, "DEMOLISHER", pairs)
+        if loc is None:
+            return
+        gamelib.debug_write(self.our_attacks[-1].total_cost)
+        spawned = game_state.attempt_spawn(self.UNIT_ENUM_MAP["INTERCEPTOR"], locations=loc, num=(2 * pairs))
+        gamelib.util.debug_write(spawned)
+        # self.our_attacks[-1].total_cost +=
+
+    def find_and_spawn_units(self, game_state, region_boundary, possible_paths, unit_type, num):
+        viable_paths = find_paths_through_coordinates(paths=possible_paths, desired_coordinates=region_boundary)
+        best_path, dmg = self.least_damage_path(game_state, viable_paths)
+        if best_path is not None:
+            # places interceptors on best possible location
+            spawned = game_state.attempt_spawn(self.UNIT_ENUM_MAP[unit_type], locations=best_path[0], num=num)
+            if spawned is not None:
+                if unit_type == "DEMOLISHER":
+                    self.our_attacks[-1].total_cost += 3 * spawned
+            return best_path[0]
+        else:
+            None
 if __name__ == "__main__":
     algo = AlgoStrategy()
     algo.start()

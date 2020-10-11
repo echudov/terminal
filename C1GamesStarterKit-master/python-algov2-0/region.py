@@ -482,6 +482,7 @@ class Region:
             unit_enum_map, defensive_only=True
         )
         self.states["UNDEFENDED TILES"] = self.undefended_tiles()
+        self.states["TURRET COUNT"] = len(self.units[unit_enum_map["TURRET"]])
         # self.states["SIMULATED DAMAGE"] = {
         #     unit: self.simulate_average_damage(unit_enum_map, unit) for unit in units
         # }
