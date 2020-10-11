@@ -790,11 +790,13 @@ class AlgoStrategy(gamelib.AlgoCore):
 
             left = self.our_defense.grid_unit[coord[0] - 1, coord[1]]
             right = self.our_defense.grid_unit[coord[0] + 1, coord[1]]
+            above = self.our_defense.grid_unit[coord[0], coord[1] + 1]
             if left is not None:
                 game_state.attempt_remove(locations=[left.x, left.y])
             if right is not None:
                 game_state.attempt_remove(locations=[right.x, right.y])
-
+            if above is not None:
+                game_state.attempt_remove(locations=[above.x, above.y])
         # Reset our self_destructs
         self.our_self_destructs = set()
 
