@@ -637,16 +637,22 @@ class AlgoStrategy(gamelib.AlgoCore):
         t0 = time.time()
         open_region = False
         gamelib.util.debug_write([self.their_defense.regions[i].states["TURRET COUNT"] for i in range(4)])
+
+
+        if game_state.turn_number > 15:
+            open_regions_to_consider = regions_to_consider
+        else:
+            open_regions_to_consider = [0, 1]
         if any(
             self.their_defense.regions[i].states["TURRET COUNT"]
-            <= 3 + (game_state.turn_number / self.ROUNDS_PER_TURRET)
-            for i in range(4)
+            <= 1 + min(5, game_state.turn_number / self.ROUNDS_PER_TURRET)
+            for i in open_regions_to_consider
         ):
             open_region = True
             weakest_region_id = self.their_defense.weakest_region(
                 self.UNIT_ENUM_MAP,
                 criteria="TURRET COUNT",
-                regions_to_consider=range(4),
+                regions_to_consider=open_regions_to_consider,
             )
             gamelib.util.debug_write("OPEN REGION: " + str(open_region))
         else:
@@ -719,18 +725,28 @@ class AlgoStrategy(gamelib.AlgoCore):
                 return
 
         # if there's an open region, split demolisher/interceptor
-        if open_region and (
-            repeated_attack != "OPEN DEMOLISHER INTERCEPTOR" or last_successful
-        ):
-            gamelib.util.debug_write("DEMOLISHER INTERCEPTOR PAIR")
-            t0 = time.time()
-            self.demolisher_interceptor_pairs(
-                game_state, weakest_region_boundary, all_possible_paths, interceptors=2
+        if open_region:
+            # for scout spam
+            viable_paths = find_paths_through_coordinates(
+                paths=all_possible_paths, desired_coordinates=weakest_region_boundary
             )
-            self.our_attacks[-1].attack_type = "OPEN DEMOLISHER INTERCEPTOR"
-            gamelib.util.debug_write(
-                "TIME TO PLACE DEMOLISHERS & INTERCEPTORS: " + str(time.time() - t0)
-            )
+            best_path, dmg = self.least_damage_path(game_state, viable_paths)
+            scouts_spawnable = game_state.number_affordable(self.UNIT_ENUM_MAP["SCOUT"])
+            if (repeated_attack != "OPEN DEMOLISHER INTERCEPTOR" or last_successful) and scouts_spawnable - dmg > 8:
+                self.our_attacks[-1].total_cost += game_state.attempt_spawn(self.UNIT_ENUM_MAP["SCOUT"], loc=list(best_path[0]), num=scouts_spawnable)
+                self.our_attacks[-1].attack_type = "SCOUT SPAM"
+                return
+
+            if repeated_attack != "OPEN DEMOLISHER INTERCEPTOR":
+                gamelib.util.debug_write("DEMOLISHER INTERCEPTOR PAIR")
+                t0 = time.time()
+                self.demolisher_interceptor_pairs(
+                    game_state, weakest_region_boundary, all_possible_paths, interceptors=2
+                )
+                self.our_attacks[-1].attack_type = "OPEN DEMOLISHER INTERCEPTOR"
+                gamelib.util.debug_write(
+                    "TIME TO PLACE DEMOLISHERS & INTERCEPTORS: " + str(time.time() - t0)
+                )
 
         if concentrated_frontal_area is not None and (
             repeated_attack != "DEMOLISHER LINE" or last_successful
@@ -745,7 +761,7 @@ class AlgoStrategy(gamelib.AlgoCore):
                 )
                 return
 
-        if game_state.get_resource(1, 0) >= 5:
+        if game_state.get_resource(1, 0) >= 10:
             gamelib.util.debug_write("DEFAULTING TO DEMOLISHER INTERCEPTOR PAIRS")
             t0 = time.time()
             self.demolisher_interceptor_pairs(
