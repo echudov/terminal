@@ -638,7 +638,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         open_region = False
         if any(
             self.their_defense.regions[i].states["TURRET COUNT"]
-            <= 1 + (game_state.turn_number / self.ROUNDS_PER_TURRET)
+            <= 3 + (game_state.turn_number / self.ROUNDS_PER_TURRET)
             for i in regions_to_consider
         ):
             open_region = True
