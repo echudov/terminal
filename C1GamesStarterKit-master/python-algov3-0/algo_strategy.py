@@ -81,6 +81,10 @@ class AlgoStrategy(gamelib.AlgoCore):
     SCOUT_DANGER_THRESHOLD = 20
     # ABSOLUTE TURRET MAX
     REGION_TURRET_MAX_ABS = 9
+    # EQUIVALENCE FOR TURRET TO SCOUT
+    TURRET_TO_SCOUT_RATIO = 5
+    # THRESHOLD FOR EVALUATING IF AN ATTACK IS GOOD QUALITY
+    ATTACK_QUALITY_THRESHOLD = 50
 
     def __init__(self):
         super().__init__()
@@ -491,12 +495,9 @@ class AlgoStrategy(gamelib.AlgoCore):
         @param game_state: Game State
         @param coord: (x, y) to place the turrets near
         """
+        region = self.our_defense.get_region(coord)
         if (
-            len(
-                self.our_defense.regions[self.our_defense.get_region(coord)].units[
-                    self.UNIT_ENUM_MAP["TURRET"]
-                ]
-            )
+            len(self.our_defense.regions[region].units[self.UNIT_ENUM_MAP["TURRET"]])
             > self.REGION_TURRET_MAX_ABS
         ):
             return
@@ -593,15 +594,36 @@ class AlgoStrategy(gamelib.AlgoCore):
         @param regions_to_consider: Which regions to consider
         """
 
+        last_three = self.our_attacks[-4:-1]
+        gamelib.util.debug_write([str(atk) for atk in last_three])
+        atk_types = [attack.attack_type for attack in last_three]
+        repeated_attack = None
+        if all(atk_type == atk_types[0] for atk_type in atk_types):
+            repeated_attack = atk_types[0]
+
+        if (
+            len(self.our_attacks[-1].breaches)
+            or self.our_attacks[-1].damage_per_point() >= self.ATTACK_QUALITY_THRESHOLD
+        ):
+            last_successful = True
+        else:
+            last_successful = False
+
+        gamelib.util.debug_write(
+            "REPEATED ATTACK: "
+            + str(repeated_attack)
+            + "; Last SUCCESSFUL: "
+            + str(last_successful)
+        )
+
         # PRECOMPUTATIONS FOR LATER LOGIC FLOW:
 
-        # find the weakest region to use in calculations
-
+        # Find the weakest region to use in calculations
         gamelib.util.debug_write("BEGINNING ATTACK STRAT PRECOMPUTATIONS")
         t0 = time.time()
         open_region = False
         if any(
-            self.their_defense.regions[i].states["TURRET COUNT"] < 0
+            self.their_defense.regions[i].states["TURRET COUNT"] <= 2
             for i in regions_to_consider
         ):
             open_region = True
@@ -635,27 +657,28 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         all_possible_paths = list(all_possible_paths.values())
 
-        # Whether or not THEY have a concentrated frontal area
+        # whether or not THEY have a concentrated frontal area
         concentrated_frontal_area = demolisher_location_helper(
             game_state, self.UNIT_ENUM_MAP, self.their_defense.units
         )
         gamelib.util.debug_write(
             "ATTACK STRATEGY PRECOMPUTATIONS FINISHED IN: " + str(time.time() - t0)
         )
-
         # LOGIC FLOW STARTS HERE:
 
         # if the opponent seems like they're saving up to barrage us
         if (
             self.saving_up_for_barrage(game_state)
             and self.their_attacks[-1].attack_type != "SCOUTS"
+            and (repeated_attack != "INTERCEPTOR DEFENSE" or last_successful)
         ):
             if (
                 any(
-                    self.our_defense.regions[i].states["TURRET COUNT"] < 4
+                    self.our_defense.regions[i].states["TURRET COUNT"]
+                    < (game_state.get_resource(1, 1) / self.TURRET_TO_SCOUT_RATIO)
                     for i in regions_to_consider
                 )
-                or game_state.get_resource(1, 1) > self.SCOUT_DANGER_THRESHOLD
+                or game_state.get_resource(1, 1) >= self.SCOUT_DANGER_THRESHOLD
             ):
                 gamelib.util.debug_write("DEFENDING AGAINST POTENTIAL BARRAGE")
                 t0 = time.time()
@@ -679,18 +702,22 @@ class AlgoStrategy(gamelib.AlgoCore):
                 return
 
         # if there's an open region, split demolisher/interceptor
-        if open_region:
+        if open_region and (
+            repeated_attack != "OPEN DEMOLISHER INTERCEPTOR" or last_successful
+        ):
             gamelib.util.debug_write("DEMOLISHER INTERCEPTOR PAIR")
             t0 = time.time()
             self.demolisher_interceptor_pairs(
                 game_state, weakest_region_boundary, all_possible_paths, interceptors=2
             )
-            self.our_attacks[-1].attack_type = "DEMOLISHER INTERCEPTOR"
+            self.our_attacks[-1].attack_type = "OPEN DEMOLISHER INTERCEPTOR"
             gamelib.util.debug_write(
                 "TIME TO PLACE DEMOLISHERS & INTERCEPTORS: " + str(time.time() - t0)
             )
 
-        if concentrated_frontal_area is not None:
+        if concentrated_frontal_area is not None and (
+            repeated_attack != "DEMOLISHER LINE" or last_successful
+        ):
             gamelib.util.debug_write("DEALING WITH CONCENTRATED FRONTAL AREA")
             t0 = time.time()
             # Target that frontal area (row + left/right half)
@@ -701,7 +728,7 @@ class AlgoStrategy(gamelib.AlgoCore):
                 )
                 return
 
-        if game_state.get_resource(1, 0) > 5:
+        if game_state.get_resource(1, 0) >= 5:
             gamelib.util.debug_write("DEFAULTING TO DEMOLISHER INTERCEPTOR PAIRS")
             t0 = time.time()
             self.demolisher_interceptor_pairs(
