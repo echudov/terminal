@@ -16,6 +16,8 @@ class Attack:
         self.total_cost = cost
 
     def damage_per_point(self):
+        if self.total_cost == 0:
+            return 0
         return ( self.damage_dealt_to_defense + self.damage_dealt_to_troops ) / self.total_cost
 
     def cost_per_breach(self):
