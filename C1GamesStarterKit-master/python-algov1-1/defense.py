@@ -11,8 +11,8 @@ class Defense:
     TURRET_TO_WALL_RATIO = 1
     MIN_TURN_TO_FORTIFY_BACK_REGIONS = 4  # Used in fortify_defenses
     MIN_TURN_REBUILD = 13  # Min turn to start re-building low-health structures
-    PERCENT_TO_REBUILD_TURRET = 0.5  # Threshold for above
-    PERCENT_TO_REBUILD_WALL = 0.5  # Threshold for above
+    PERCENT_TO_REBUILD_TURRET = 0.75  # Threshold for above
+    PERCENT_TO_REBUILD_WALL = 0.75  # Threshold for above
 
     def __init__(self, unit_enum_map: dict, player_id: int):
         """
@@ -377,33 +377,45 @@ class Defense:
         @param game_state: Game State to pass in
         @param criteria: Criteria to evaluate weakest region on
         """
-        while (
-            not self.turrets_to_rebuild.empty() and game_state.get_resource(0, 0) >= 4
-        ):
-            elem = self.turrets_to_rebuild.get()
-            if (
-                game_state.attempt_spawn(
-                    unit_type=unit_enum_map["TURRET"], locations=elem["COORD"]
-                )
-                > 0
+        if game_state.turn_number > 10:
+            while (
+                not self.turrets_to_rebuild.empty() and game_state.get_resource(0, 0) >= 4
             ):
-                if elem["UPGRADE"]:
-                    game_state.attempt_upgrade(locations=elem["COORD"])
+                elem = self.turrets_to_rebuild.get()
+                if (
+                    game_state.attempt_spawn(
+                        unit_type=unit_enum_map["TURRET"], locations=elem["COORD"]
+                    )
+                    > 0
+                ):
+                    if True:
+                        turret = game_state.game_map[elem["COORD"]][0]
+                        above = [turret.x, turret.y + 1]
+                        right = [turret.x + 1, turret.y]
+                        left = [turret.x - 1, turret.y]
+                        loc = [above, right, left]
+                        game_state.attempt_spawn(
+                            unit_type=unit_enum_map["WALL"], locations=loc
+                        )
+                        if elem["UPGRADE"]:
+                            for l in loc:
+                                game_state.attempt_upgrade(locations=loc)
 
-        self.turrets_to_rebuild = queue.Queue()
 
-        while not self.walls_to_rebuild.empty() and game_state.get_resource(0, 0) >= 4:
-            elem = self.walls_to_rebuild.get()
-            if (
-                game_state.attempt_spawn(
-                    unit_type=unit_enum_map["WALL"], locations=elem["COORD"]
-                )
-                > 0
-            ):
-                if elem["UPGRADE"]:
-                    game_state.attempt_upgrade(locations=elem["COORD"])
+            self.turrets_to_rebuild = queue.Queue()
 
-        self.walls_to_rebuild = queue.Queue()
+            while not self.walls_to_rebuild.empty() and game_state.get_resource(0, 0) >= 4:
+                elem = self.walls_to_rebuild.get()
+                if (
+                    game_state.attempt_spawn(
+                        unit_type=unit_enum_map["WALL"], locations=elem["COORD"]
+                    )
+                    > 0
+                ):
+                    if True:
+                        game_state.attempt_upgrade(locations=elem["COORD"])
+
+            self.walls_to_rebuild = queue.Queue()
 
         if (
             game_state.turn_number >= self.MIN_TURN_REBUILD
