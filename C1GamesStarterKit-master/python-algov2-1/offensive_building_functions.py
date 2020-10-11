@@ -128,7 +128,7 @@ class OffensiveDemolisherLine:
 
         # Offset coordinates one down or one left/right depending on where it places walls
         path = game_state.find_path_to_edge(dem_location)
-        while path is None or len(path) < MIN_PATH_LENGTH:
+        while dem_location[1] > 0 and (path is None or len(path) < MIN_PATH_LENGTH):
             if right:
                 dem_location[0] += 1
             else:
