@@ -333,7 +333,7 @@ class AlgoStrategy(gamelib.AlgoCore):
             # TODO- Still need this?
             t0 = time.time()
             gamelib.util.debug_write("FORTIFYING DEFENSES")
-            self.our_defense.fortify_defenses(game_state, self.UNIT_ENUM_MAP)
+            self.our_defense.fortify_defenses(game_state, self.UNIT_ENUM_MAP, sp_left=min(game_state.turn_number * 0.75, 9))
             gamelib.util.debug_write("DEFENSES FORTIFIED IN: " + str(time.time() - t0))
             # ATTACKS BELOW THIS LINE
 
