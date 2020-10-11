@@ -318,8 +318,14 @@ class AlgoStrategy(gamelib.AlgoCore):
             t0 = time.time()
             possible_enemy_endpoints = self.calculate_all_possible_endpoints(game_state)
             if len(possible_enemy_endpoints) <= 2:
-                for endpoint in possible_enemy_endpoints:
-                    self.place_turrets_near_coord(game_state, endpoint)
+                for endpoint, path in possible_enemy_endpoints.items():
+                    distance_inside_our_base = 0
+                    for coord in path:
+                        if coord[1] < 14:
+                            distance_inside_our_base += 1
+                        if distance_inside_our_base == 3:
+                            self.place_turrets_near_coord(game_state, coord)
+                            break
             gamelib.util.debug_write(
                 "ENDPOINTS CALCULATED IN: " + str(time.time() - t0)
             )
@@ -632,7 +638,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         open_region = False
         if any(
             self.their_defense.regions[i].states["TURRET COUNT"]
-            <= 1 + (game_state.turn_number / self.ROUNDS_PER_TURRET)
+            <= 3 + (game_state.turn_number / self.ROUNDS_PER_TURRET)
             for i in regions_to_consider
         ):
             open_region = True
@@ -762,14 +768,14 @@ class AlgoStrategy(gamelib.AlgoCore):
         @return: list of unique endpoints
         """
 
-        endpoints = set()
+        endpoints = {}
         for coord in self.their_defense.spawn_coordinates:
             path = game_state.find_path_to_edge(coord)
             if path is not None and path[-1][1] < 13:
                 # Path leads to our half of the arena
-                endpoints.add(tuple(path[-1]))
+                endpoints[tuple(path[-1])] = path
 
-        return list(endpoints)
+        return endpoints
 
     def resolve_existing_blocks(self, game_state: gamelib.GameState):
         """
