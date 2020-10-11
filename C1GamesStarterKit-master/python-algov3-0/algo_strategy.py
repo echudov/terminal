@@ -613,7 +613,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         last_two_theirs = self.our_attacks[-3:-1]
         gamelib.util.debug_write([str(atk) for atk in last_two_theirs])
         atk_types = [attack.attack_type for attack in last_two_theirs]
-        repeated_attack = None
+        their_repeated_attack = None
         if all(atk_type == atk_types[0] for atk_type in atk_types):
             their_repeated_attack = atk_types[0]
 
@@ -631,7 +631,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         t0 = time.time()
         open_region = False
         if any(
-            self.their_defense.regions[i].states["TURRET COUNT"] <= 1 + (game_state.turn_number / self.ROUNDS_PER_TURRET)
+            self.their_defense.regions[i].states["TURRET COUNT"]
+            <= 1 + (game_state.turn_number / self.ROUNDS_PER_TURRET)
             for i in regions_to_consider
         ):
             open_region = True
@@ -675,11 +676,10 @@ class AlgoStrategy(gamelib.AlgoCore):
         # LOGIC FLOW STARTS HERE:
 
         # if the opponent seems like they're saving up to barrage us
-        if (
-            their_repeated_attack == "SCOUT" or (
+        if their_repeated_attack == "SCOUT" or (
             self.saving_up_for_barrage(game_state)
             and self.their_attacks[-1].attack_type != "SCOUTS"
-            and (repeated_attack != "INTERCEPTOR DEFENSE" or last_successful))
+            and (repeated_attack != "INTERCEPTOR DEFENSE" or last_successful)
         ):
             if (
                 any(
