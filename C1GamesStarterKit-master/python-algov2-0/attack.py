@@ -23,3 +23,9 @@ class Attack:
             return self.total_cost / len(self.breaches)
         else:
             return 1000000000
+
+    def __str__(self):
+        return "Player ID: " + str(self.player_id) + "; Attack Type: " + str(self.attack_type) + "; DMG To Defenses " + \
+            str(self.damage_dealt_to_defense) + "; DMG To Troops " + str(self.damage_dealt_to_troops) + \
+            "; Breaches: " + str(self.breaches) + "; Self Destructs: " + str(self.self_destructs) + \
+            "; Total Cost: " + str(self.total_cost)
