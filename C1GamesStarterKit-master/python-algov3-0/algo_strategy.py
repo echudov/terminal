@@ -613,7 +613,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         last_two_theirs = self.our_attacks[-3:-1]
         gamelib.util.debug_write([str(atk) for atk in last_two_theirs])
         atk_types = [attack.attack_type for attack in last_two_theirs]
-        their_repeated_attack = None
+        their_repeated_attack = ""
         if all(atk_type == atk_types[0] for atk_type in atk_types):
             their_repeated_attack = atk_types[0]
 
