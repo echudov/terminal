@@ -638,7 +638,7 @@ class AlgoStrategy(gamelib.AlgoCore):
             weakest_region_id = self.their_defense.weakest_region(
                 self.UNIT_ENUM_MAP,
                 criteria="TURRET COUNT",
-                regions_to_consider=regions_to_consider,
+                regions_to_consider=range(4),
             )
         else:
             weakest_region_id = self.their_defense.weakest_region(
